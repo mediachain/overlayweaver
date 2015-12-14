@@ -55,7 +55,7 @@
 	<property name="main.class.name" value="ow.tool.emulator.Main"/>
 
 	<!-- compile flags -->
-	<property name="target.vm.ver" value="5"/>
+	<property name="target.vm.ver" value="8"/>
 	<property name="debug" value="on"/>
 	<property name="deprecation" value="on"/>
 	<property name="optimize" value="on"/>
