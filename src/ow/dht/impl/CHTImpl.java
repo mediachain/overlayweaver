@@ -36,10 +36,7 @@ import ow.directory.MultiValueDirectory;
 import ow.id.ID;
 import ow.id.IDAddressPair;
 import ow.messaging.MessagingAddress;
-import ow.routing.RoutingAlgorithmConfiguration;
-import ow.routing.RoutingHop;
-import ow.routing.RoutingResult;
-import ow.routing.RoutingService;
+import ow.routing.*;
 
 /**
  * An implementation of DHT service.
@@ -178,6 +175,13 @@ public final class CHTImpl<V extends Serializable> implements DHT<V> {
 
 		return results;
 	}
+
+	@Override
+	public Set<ValueInfo<V>> getSimilar(ID key, float similarity) throws RoutingException {
+		// TODO: implement if/when time allows
+		return this.get(key);
+	}
+
 	public Set<ValueInfo<V>>[] get(ID[] keys) {
 		Set<ValueInfo<V>>[] results = new Set/*<ValueInfo<V>>*/[keys.length];
 

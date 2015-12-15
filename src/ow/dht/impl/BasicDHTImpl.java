@@ -30,10 +30,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import ow.dht.ByteArray;
-import ow.dht.DHT;
-import ow.dht.DHTConfiguration;
-import ow.dht.ValueInfo;
+import ow.dht.*;
 import ow.dht.impl.message.DHTReplyMessage;
 import ow.dht.impl.message.GetMessage;
 import ow.dht.impl.message.PutMessage;
@@ -252,6 +249,17 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		if (routingRes[0] == null) throw new RoutingException();
 
 		return results[0];
+	}
+
+
+	public Set<ValueInfo<V>> getSimilar(ID key, float similarity)
+		throws RoutingException {
+		if (!config.getSearchKeysForSimilarity()) {
+			return this.get(key);
+		}
+
+		// TODO: Implement getSimilarRemotely
+		return new HashSet<>();
 	}
 
 	public Set<ValueInfo<V>>[] get(ID[] keys) {
