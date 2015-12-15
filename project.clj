@@ -4,6 +4,7 @@
   :resource-paths ["lib/*"]
   :source-paths ["clj/src" "clj/test"]
   :java-source-paths ["src"]
+  :javac-options ["-target" "8" "-source" "8"]
   :dependencies [[org.clojure/clojure "1.7.0"]]
 
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.9.0"]]}})
