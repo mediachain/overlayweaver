@@ -55,7 +55,7 @@
 	<property name="main.class.name" value="ow.tool.emulator.Main"/>
 
 	<!-- compile flags -->
-	<property name="target.vm.ver" value="5"/>
+	<property name="target.vm.ver" value="8"/>
 	<property name="debug" value="on"/>
 	<property name="deprecation" value="on"/>
 	<property name="optimize" value="on"/>
@@ -143,8 +143,8 @@
 			destdir="${main.build.dir}"
 			classpathref="compile.main.classpath"
 			includeAntRuntime="false"
+			target="${target.vm.ver}"
 			debug="${debug}" deprecation="${deprecation}" optimize="${optimize}"/>
-			<!-- target="${target.vm.ver}" -->
 
 		<copy todir="${main.build.dir}">
 			<fileset dir="${main.src.dir}">
@@ -159,9 +159,9 @@
 		<javac srcdir="${test.src.dir}"
 			destdir="${test.build.dir}"
 			classpathref="compile.test.classpath"
+			target="${target.vm.ver}"
 			debug="${debug}" deprecation="${deprecation}" optimize="${optimize}"/>
 	</target>
-			<!-- target="${target.vm.ver}" -->
 
 	<!-- target: dist -->
 	<target name="dist" depends="distclean">
