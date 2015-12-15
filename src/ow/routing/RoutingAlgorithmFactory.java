@@ -27,6 +27,7 @@ public class RoutingAlgorithmFactory {
 	private final static Logger logger = Logger.getLogger("routing");
 
 	private final static Class/*<RoutingAlgorithmProvider>*/[] PROVIDERS = {
+		ow.routing.chord.HammingProvider.class,	// "Hamming"
 		ow.routing.chord.ChordProvider.class,					// "Chord"
 		ow.routing.kademlia.KademliaProvider.class,			// "Kademlia"
 		ow.routing.koorde.KoordeProvider.class,				// "Koorde"
