@@ -14,8 +14,14 @@ import java.util.logging.Level;
 
 
 /**
- * Created by yusef on 12/14/15.
+ * Chord implementation which orders its successor ring according to the reflected binary
+ * Gray Code, to assist in similarity searches using a locality-sensitive hash.
+ * See "Hamming DHT: An Indexing System for Similarity Search" by
+ * Rodolfo da Silva Villaca, et al.
+ *
+ * http://ce-resd.facom.ufms.br/sbrc/2012/ST4_2.pdf
  */
+
 public class Hamming extends AbstractChord {
   private ChordConfiguration config;
 
@@ -42,13 +48,7 @@ public class Hamming extends AbstractChord {
 
   @Override
   public BigInteger distance(ID to, ID from) {
-    // FIXME: Right now, this is just returning the hamming distance.
-    // For an n-bit int, there are 2^n possible "neighbors" with a hamming distance
-    // of 1 in the Gray code.  What we really want is the distance in between `to` and
-    // `from` in the Gray code sequence...
-
-    int hammingDist = to.toBigInteger().xor(from.toBigInteger()).bitCount();
-    return BigInteger.valueOf(hammingDist);
+    return GrayCode.distance(to.toBigInteger(), from.toBigInteger());
   }
 
   private synchronized void startFingerTableFixer() {

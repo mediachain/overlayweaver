@@ -32,9 +32,26 @@ public class GrayCode {
     return toGray(b1.subtract(b2));
   }
 
-  public static BigInteger add(BigInteger g1, BigInteger g2, int width) {
+  public static BigInteger add(BigInteger g1, BigInteger g2) {
     final BigInteger b1 = fromGray(g1);
     final BigInteger b2 = fromGray(g2);
     return toGray(b1.add(b2));
+  }
+
+  public static BigInteger distance(BigInteger g1, BigInteger g2) {
+    final BigInteger b1 = fromGray(g1);
+    final BigInteger b2 = fromGray(g2);
+    // Need to ensure that the result is not negative, since
+    // conversion breaks for negative numbers
+    BigInteger larger, smaller;
+    if (b1.compareTo(b2) > 0) {
+      larger = b1;
+      smaller = b2;
+    } else {
+      larger = b2;
+      smaller = b1;
+    }
+
+    return toGray(larger.subtract(smaller));
   }
 }
