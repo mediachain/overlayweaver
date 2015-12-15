@@ -24,7 +24,7 @@ if $cygwin; then
 fi
 export CLASSPATH
 
-JVM_OPTION="-Xss110k"
+JVM_OPTION="-Xss256k"
 #JVM_OPTION="-server -Xss110k -Xmx250m"
 
 exec java $JVM_OPTION -Djava.util.logging.config.file=$LOGGING_CONFIG ow.tool.dhtshell.Main "$@"
