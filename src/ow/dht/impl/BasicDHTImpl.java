@@ -72,6 +72,9 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 	private final static String GLOBAL_DB_NAME = "global";
 
+	private final static String CALLBACK_NAME_GET = "GET";
+	private final static String CALLBACK_NAME_GET_SIMILAR = "GET_SIMILAR";
+
 	// members common to higher level services (DHT and Mcast)
 
 	protected DHTConfiguration config;
@@ -269,9 +272,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	protected RoutingResult[] getRemotely(ID[] keys, Set<ValueInfo<V>>[] results) {
-		Serializable[][] args = new Serializable[keys.length][1];
+		Serializable[][] args = new Serializable[keys.length][2];
 		for (int i = 0; i < keys.length; i++) {
-			args[i][0] = keys[i];
+			args[i][0] = CALLBACK_NAME_GET;
+			args[i][1] = keys[i];
 		}
 
 		Serializable[][] callbackResultContainer = new Serializable[keys.length][1];
@@ -807,14 +811,20 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	private void prepareCallbacks(RoutingService routingSvc) {
 		routingSvc.addCallbackOnRoute(new CallbackOnRoute() {
 			public Serializable process(ID target, int tag, Serializable[] args, IDAddressPair lastHop, boolean onResponsibleNode) {
-				ID key;
+				String callbackName = (String)args[0];
+				ID key = (ID)args[1];
 
-				logger.log(Level.INFO, "A callback invoked: " + (ID)args[0]);
+				logger.log(Level.INFO, "A callback invoked: " + callbackName + ": " + key);
 
-				// get
-				key = (ID)args[0];
 
-				return (Serializable)getValueLocally(key, globalDir);
+				if (callbackName.equals(CALLBACK_NAME_GET)) {
+					return (Serializable) getValueLocally(key, globalDir);
+				} else if (callbackName.equals(CALLBACK_NAME_GET_SIMILAR)) {
+					return (Serializable) getSimilarValuesLocally(key, globalDir);
+				}
+
+				logger.log(Level.WARNING, "Unknown callback name " + callbackName);
+				return new HashSet();
 			}
 		});
 	}
@@ -832,5 +842,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		}
 
 		return returnedValues;
+	}
+
+	protected Set<ValueInfo<V>> getSimilarValuesLocally(ID key, MultiValueDirectory<ID, ValueInfo<V>> dir) {
+		// TODO - implement
+		return this.getValueLocally(key, dir);
 	}
 }
