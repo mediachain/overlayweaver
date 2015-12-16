@@ -1,6 +1,6 @@
 (ns hamming-dht.hamming-dht.core
   (:import
-    [ow.dht DHTFactory]))
+    [ow.dht DHTFactory DHT]))
 
 (def hamming-config
   (doto (DHTFactory/getDefaultConfiguration)

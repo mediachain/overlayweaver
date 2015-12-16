@@ -1,0 +1,13 @@
+timeoffset 2000
+
+# invokes the first node
+class ow.tool.dhtshell.Main
+arg -p 10000
+schedule 0 invoke
+
+# invokes 3 nodes, which contacts the first node (emu0) to join an overlay
+arg emu0
+schedule 1000,1000,3 invoke
+
+# keeps the emulator running
+schedule inf control all halt
