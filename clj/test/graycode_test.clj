@@ -1,6 +1,6 @@
 (ns graycode-test
   (:require
-    [hamming-dht.graycode :refer [to-gray from-gray add-gray subtract-gray]]
+    [hamming-dht.graycode :as gray]
     [clojure.test.check :as tc]
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop])
@@ -21,7 +21,7 @@
    the commutative property fails: g1 != g1 - g2 + g2"
   (prop/for-all
     [i gen/pos-int j gen/pos-int]
-    (let [g1 (to-gray i) g2 (to-gray j)]
-      (= g1 (-> g1 (add-gray g2) (subtract-gray g2))))))
+    (let [g1 (gray/from-bin i) g2 (gray/from-bin j)]
+      (= g1 (-> g1 (gray/add g2) (gray/subtract g2))))))
 
 (tc/quick-check 100 gray-code-bidirectional-prop)
