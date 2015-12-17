@@ -19,6 +19,7 @@ package ow.dht;
 
 import java.io.Serializable;
 import java.util.Set;
+import java.util.SortedMap;
 
 import ow.id.ID;
 import ow.routing.RoutingException;
@@ -81,9 +82,9 @@ public interface DHT<V extends Serializable> extends HighLevelService {
 	 * Returns values for keys within `similarity` threshold of `key`
 	 * @param key
 	 * @param similarity - threshold within which similar keys will be returned (range: 0-1)
-	 * @return
+	 * @return A map of key -> set of values, sorted by similarity
 	 */
-	Set<ValueInfo<V>> getSimilar(ID key, float similarity)
+	SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity)
 			throws RoutingException;
 
 	/**

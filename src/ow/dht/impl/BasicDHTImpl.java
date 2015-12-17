@@ -21,12 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -255,14 +250,18 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 
-	public Set<ValueInfo<V>> getSimilar(ID key, float similarity)
+	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
 		throws RoutingException {
-		if (!config.getSearchKeysForSimilarity()) {
-			return this.get(key);
+		ID[] keys = { key };
+		float[] thresholds = { threshold };
+		SortedMap<ID, Set<ValueInfo<V>>>[] results = new SortedMap[keys.length];
+		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results);
+
+		if (routingRes[0] == null) {
+			throw new RoutingException();
 		}
 
-		// TODO: Implement getSimilarRemotely
-		return new HashSet<>();
+		return results[0];
 	}
 
 	public Set<ValueInfo<V>>[] get(ID[] keys) {
@@ -294,6 +293,54 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				results[i] = (Set<ValueInfo<V>>)callbackResultContainer[i][0];
 
 			if (results[i] == null) results[i] = new HashSet<ValueInfo<V>>();
+			// routing succeeded and results[i] should not be null.
+		}
+
+		return routingRes;
+	}
+
+	protected RoutingResult[] getSimilarRemotely(ID[] keys,
+																							 float[] thresholds,
+																							 SortedMap<ID, Set<ValueInfo<V>>>[] results) {
+		if (!config.getSearchKeysForSimilarity()) {
+			// fallback to getRemotely()
+			Set<ValueInfo<V>>[] exactResults = new Set[keys.length];
+			RoutingResult[] routingRes = getRemotely(keys, exactResults);
+			for (int i = 0; i < keys.length; i++) {
+				if (exactResults[i] == null) {
+					results[i] = new TreeMap<>();
+				} else {
+					TreeMap<ID, Set<ValueInfo<V>>> sorted = new TreeMap<>();
+					sorted.put(keys[i], exactResults[i]);
+					results[i] = sorted;
+				}
+			}
+			return routingRes;
+		}
+
+		Serializable[][] args = new Serializable[keys.length][2];
+		for (int i = 0; i < keys.length; i++) {
+			args[i][0] = CALLBACK_NAME_GET_SIMILAR;
+			args[i][1] = keys[i];
+			args[i][2] = thresholds[i];
+		}
+
+		Serializable[][] callbackResultContainer = new Serializable[keys.length][1];
+
+		// get from the responsible node by RoutingService#invokeCallbacksOnRoute()
+		RoutingResult[] routingRes = this.routingSvc.invokeCallbacksOnRoute(
+				keys, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
+				callbackResultContainer, -1, args);
+
+		this.preserveRoute(keys, routingRes);
+
+		for (int i = 0; i < keys.length; i++) {
+			if (routingRes[i] == null) continue;
+
+			if (callbackResultContainer[i] != null)
+				results[i] = (SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+
+			if (results[i] == null) results[i] = new TreeMap<>();
 			// routing succeeded and results[i] should not be null.
 		}
 
@@ -820,7 +867,8 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				if (callbackName.equals(CALLBACK_NAME_GET)) {
 					return (Serializable) getValueLocally(key, globalDir);
 				} else if (callbackName.equals(CALLBACK_NAME_GET_SIMILAR)) {
-					return (Serializable) getSimilarValuesLocally(key, globalDir);
+					float threshold = (Float)args[2];
+					return (Serializable) getSimilarValuesLocally(key, threshold, globalDir);
 				}
 
 				logger.log(Level.WARNING, "Unknown callback name " + callbackName);
@@ -844,8 +892,15 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		return returnedValues;
 	}
 
-	protected Set<ValueInfo<V>> getSimilarValuesLocally(ID key, MultiValueDirectory<ID, ValueInfo<V>> dir) {
-		// TODO - implement
-		return this.getValueLocally(key, dir);
+	protected SortedMap<ID, Set<ValueInfo<V>>>
+		getSimilarValuesLocally(ID key, float threshold, MultiValueDirectory<ID, ValueInfo<V>> dir) {
+
+		try {
+			return dir.getSimilar(key, threshold);
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "An Exception thrown by Directory#getSimilar().", e);
+			return null;
+		}
+
 	}
 }
