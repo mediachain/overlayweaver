@@ -22,6 +22,7 @@ import ow.directory.SingleValueDirectory;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.Transaction;
+import ow.directory.comparator.KeySimilarityComparator;
 
 import java.util.*;
 
@@ -33,16 +34,21 @@ import java.util.*;
  * @param <V> Type of values.
  */
 public class SingleValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implements SingleValueDirectory<K,V> {
-	protected SingleValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName) throws Exception {
-		super(typeK, typeV, env, dbName, false);
+
+	protected SingleValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName,
+																	 KeySimilarityComparator<K> similarityComparator)
+			throws Exception {
+		super(typeK, typeV, env, dbName, false, similarityComparator);
 	}
 
 	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,V>>() {{
-			add(result);
-		}};
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+		for (K k : keys) {
+			results.add(new AbstractMap.SimpleImmutableEntry<K,V>(k, this.get(k)));
+		}
+
+		return results;
 	}
 
 	public V get(K key) throws DatabaseException {

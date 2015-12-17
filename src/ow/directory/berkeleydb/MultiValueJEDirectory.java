@@ -32,10 +32,13 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
+import ow.directory.comparator.KeySimilarityComparator;
 
 public class MultiValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implements MultiValueDirectory<K,V> {
-	protected MultiValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName) throws Exception {
-		super(typeK, typeV, env, dbName, true);
+	protected MultiValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName,
+																	KeySimilarityComparator<K> similarityComparator)
+			throws Exception {
+		super(typeK, typeV, env, dbName, true, similarityComparator);
 	}
 
 	public Set<V> get(K key) throws DatabaseException {
@@ -43,11 +46,13 @@ public class MultiValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> impleme
 	}
 
 	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,Set<V>>>() {{
-			add(result);
-		}};
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashSet<Map.Entry<K, Set<V>>> results = new HashSet<>();
+
+		for (K k : keys) {
+			results.add(new AbstractMap.SimpleImmutableEntry<>(k, this.get(k)));
+		}
+		return results;
 	}
 
 	public V put(K key, V value) throws Exception {

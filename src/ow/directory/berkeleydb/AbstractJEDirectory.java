@@ -17,13 +17,11 @@
 
 package ow.directory.berkeleydb;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import ow.directory.comparator.KeySimilarityComparator;
 import ow.id.ID;
 
 import com.sleepycat.bind.ByteArrayBinding;
@@ -48,6 +46,7 @@ public abstract class AbstractJEDirectory<K,V> {
 	final static Logger logger = Logger.getLogger("directory");
 
 	private final String dbName;
+	KeySimilarityComparator<K> similarityComparator;
 	Environment env;
 	Database db;
 	SortedMap<K,V> map;
@@ -58,7 +57,7 @@ public abstract class AbstractJEDirectory<K,V> {
 	private boolean catalogPrepared = false;
 
 	protected AbstractJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName,
-			boolean allowMultipleValues) throws Exception {
+			boolean allowMultipleValues, KeySimilarityComparator<K> similarityComparator) throws Exception {
 		this.env = env;
 
 		// prepare DatabaseConfig
@@ -87,6 +86,7 @@ public abstract class AbstractJEDirectory<K,V> {
 		txn.commit();
 
 		this.map = new StoredSortedMap<K,V>(db, keyBinding, dataBinding, true);
+		this.similarityComparator = similarityComparator;
 	}
 
 	/**
@@ -128,6 +128,30 @@ public abstract class AbstractJEDirectory<K,V> {
 		catch (DatabaseException e) {
 			logger.log(Level.WARNING, e.getMessage());
 		}
+	}
+
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		if (similarityComparator == null) {
+			logger.warning("Similarity comparison not supported");
+			if (this.keySet().contains(key)) {
+				return new HashSet<K>() {{
+					add(key);
+				}};
+			}
+			return new HashSet<>();
+		}
+
+		// TODO: use more efficient impl than brute-force search of entire keyset :)
+		Set<K> keys = keySet();
+		HashSet<K> results = new HashSet<>();
+
+		for (K candidate : keys) {
+			float sim = similarityComparator.similarity(key, candidate);
+			if (sim >= threshold) {
+				results.add(candidate);
+			}
+		}
+		return results;
 	}
 
 	public Set<Map.Entry<K,V>> entrySet() {
