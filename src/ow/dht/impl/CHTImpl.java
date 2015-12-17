@@ -22,6 +22,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -177,9 +179,14 @@ public final class CHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	@Override
-	public Set<ValueInfo<V>> getSimilar(ID key, float similarity) throws RoutingException {
-		// TODO: implement if/when time allows
-		return this.get(key);
+	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity) throws RoutingException {
+		// TODO: implement if/when time allows. for now, fall back to get()
+		Set<ValueInfo<V>> val = this.get(key);
+		TreeMap<ID, Set<ValueInfo<V>>> result = new TreeMap<>();
+		if (val != null) {
+			result.put(key, val);
+		}
+		return result;
 	}
 
 	public Set<ValueInfo<V>>[] get(ID[] keys) {
