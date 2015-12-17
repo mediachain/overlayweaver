@@ -17,6 +17,8 @@
 
 package ow.directory;
 
+import ow.directory.comparator.KeySimilarityComparator;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -31,6 +33,13 @@ public interface MultiValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	 * @return Null if no value was found.
 	 */
 	Set<V> get(K key) throws Exception;
+
+	/**
+	 * Returns the set of keys similar to `key` within `threshold`,
+	 * using the KeySimilarityComparator specified in the config.
+	 * @return empty set if no similar keys are found
+   */
+	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
 
 	/**
 	 * Returns a set of key/value pairs for keys that are similar to `key`, within `threshold`

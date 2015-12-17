@@ -116,12 +116,18 @@ public class ExpiringMultiValueDirectory<K,V> extends AbstractExpiringDirectory<
 		return getAndRemove(key, false);
 	}
 
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return this.dir.getSimilarKeys(key, threshold);
+	}
+
 	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,Set<V>>>() {{
-			add(result);
-		}};
+		Set<K> keys = getSimilarKeys(key, threshold);
+
+		Set<Map.Entry<K, Set<V>>> ret = new HashSet<>();
+		for (K k : keys) {
+			ret.add(new AbstractMap.SimpleImmutableEntry<>(k, get(k)));
+		}
+		return ret;
 	}
 
 	public Set<V> remove(K key) throws Exception {

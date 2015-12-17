@@ -22,12 +22,14 @@ import java.util.AbstractMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import ow.directory.SingleValueDirectory;
 import ow.util.Timer;
 
 public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory<K,V>
 		implements SingleValueDirectory<K,V>, Serializable {
+	private final static Logger logger = Logger.getLogger("directory");
 	private SingleValueDirectory<K,ExpiringValue<V>> internalDirectory;
 
 	public ExpiringSingleValueDirectory(SingleValueDirectory<K,ExpiringValue<V>> dir,
@@ -109,12 +111,20 @@ public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory
 		return getAndRemove(key, false);
 	}
 
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return internalDirectory.getSimilarKeys(key, threshold);
+	}
+
 	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,V>>() {{
-			add(result);
-		}};
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+
+		for (K k : keys) {
+			final Map.Entry<K,V> entry = new AbstractMap.SimpleImmutableEntry<>(k, get(k));
+			results.add(entry);
+		}
+
+		return results;
 	}
 
 	public V remove(K key) throws Exception {

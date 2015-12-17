@@ -17,6 +17,8 @@
 
 package ow.directory;
 
+import ow.directory.comparator.KeySimilarityComparator;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -25,6 +27,7 @@ import java.util.Set;
  */
 public interface SingleValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	V get(K key) throws Exception;
+	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
 	Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception;
 	V put(K key, V value) throws Exception;
 	V remove(K key) throws Exception;

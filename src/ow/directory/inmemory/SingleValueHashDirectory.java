@@ -125,26 +125,35 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 		return this.map.get(key);
 	}
 
-	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
-		// If we can't compare similarity, fall back to standard get.
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
 		if (similarityComparator == null) {
-			logger.warning("Similarity comparison not supported, using get(key)");
-			final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
-			return new HashSet<Map.Entry<K,V>>() {{
-				add(result);
-			}};
+			logger.warning("Similarity comparison not supported");
+			if (this.keySet().contains(key)) {
+				return new HashSet<K>() {{
+					add(key);
+				}};
+			}
+			return new HashSet<>();
 		}
 
 		// TODO: use more efficient impl than brute-force search of entire keyset :)
 		Set<K> keys = keySet();
-		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+		HashSet<K> results = new HashSet<>();
 
 		for (K candidate : keys) {
 			float sim = similarityComparator.similarity(key, candidate);
 			if (sim >= threshold) {
-				final Map.Entry<K,V> entry = new AbstractMap.SimpleImmutableEntry<>(key, get(key));
-				results.add(entry);
+				results.add(candidate);
 			}
+		}
+		return results;
+	}
+
+	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+		for (K k : keys) {
+			results.add(new AbstractMap.SimpleImmutableEntry<K,V>(k, this.get(k)));
 		}
 
 		return results;
