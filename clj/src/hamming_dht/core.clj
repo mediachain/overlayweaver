@@ -1,4 +1,4 @@
-(ns hamming-dht.hamming-dht.core
+(ns hamming-dht.core
   (:import
     [ow.dht DHTFactory DHT]))
 
