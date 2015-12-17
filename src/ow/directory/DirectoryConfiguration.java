@@ -16,6 +16,8 @@
 
 package ow.directory;
 
+import ow.directory.comparator.KeySimilarityComparatorFactory;
+
 import java.io.Serializable;
 
 public class DirectoryConfiguration implements Serializable {
@@ -34,7 +36,7 @@ public class DirectoryConfiguration implements Serializable {
 	public final static long DEFAULT_EXPIRATION_TIME = -1L;	// does not expire
 	public final static HeapOverflowAction DEFAULT_HEAP_OVERFLOW_ACTION = HeapOverflowAction.LRU;
 	public final static long DEFAULT_REQUIRED_FREE_HEAP_TO_PUT = 128 * 1024L;	// 128 KB
-
+	public final static String DEFAULT_SIMILARITY_METRIC = KeySimilarityComparatorFactory.METRIC_HAMMING;
 
 	// Expiration time (in millisecond)
 	public long expirationTime = DEFAULT_EXPIRATION_TIME;
@@ -61,6 +63,14 @@ public class DirectoryConfiguration implements Serializable {
 	public long setRequiredFreeHeapToPut(long mem) {
 		long old = this.reqFreeHeap;
 		this.reqFreeHeap = mem;
+		return old;
+	}
+
+	private String similarityMetric = DEFAULT_SIMILARITY_METRIC;
+	public String getSimilarityMetric() { return this.similarityMetric; }
+	public String setSimilarityMetric(String metric) {
+		String old = this.similarityMetric;
+		this.similarityMetric = metric;
 		return old;
 	}
 }

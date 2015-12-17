@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import ow.directory.DirectoryConfiguration;
 import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 
 public final class MultipleValueHashDirectory<K,V> implements MultiValueDirectory<K,V> {
 	SingleValueDirectory<K,Map<V,V>> internalDir;
@@ -50,11 +51,20 @@ public final class MultipleValueHashDirectory<K,V> implements MultiValueDirector
 	}
 
 	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,Set<V>>>() {{
-			add(result);
-		}};
+		Set<Map.Entry<K, Map<V,V>>> resultSet = this.internalDir.getSimilar(key, threshold);
+		if (resultSet == null) {
+			return null;
+		}
+
+		Set<Map.Entry<K, Set<V>>> ret = new HashSet<>();
+		for (Map.Entry<K, Map<V,V>> entry : resultSet) {
+			K k = entry.getKey();
+			Set<V> vals = new HashSet<>();
+			vals.addAll(entry.getValue().keySet());
+			Map.Entry<K, Set<V>> outputEntry = new AbstractMap.SimpleEntry<>(k, vals);
+			ret.add(outputEntry);
+		}
+		return ret;
 	}
 
 	public V put(K key, V value) throws Exception {

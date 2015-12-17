@@ -32,6 +32,8 @@ import ow.directory.DirectoryConfiguration;
 import ow.directory.DirectoryConfiguration.HeapOverflowAction;
 import ow.directory.OutOfHeapException;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
+import ow.directory.comparator.KeySimilarityComparatorFactory;
 
 public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory<K,V> {
 	private final static Logger logger = Logger.getLogger("directory");
@@ -43,6 +45,7 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 	private Map<K,V> map;
 	private boolean changed = false;	// if true, this map is to be synchronized
 	private Synchronizer synchronizer;
+	private final KeySimilarityComparator<K> similarityComparator;
 
 	protected SingleValueHashDirectory(Class typeK, Class typeV, String workingDir, String dbName, String dbNameOld,
 			DirectoryConfiguration config, long syncInterval) throws Exception {
@@ -78,6 +81,9 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 		}
 
 		this.map = Collections.synchronizedMap(this.rawMap);
+
+		String metric = config.getSimilarityMetric();
+		this.similarityComparator =  KeySimilarityComparatorFactory.getComparator(typeK, metric);
 
 		// start a synchronizing thread
 		if (this.syncInterval > 0) {
@@ -120,11 +126,28 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 	}
 
 	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,V>>() {{
-			add(result);
-		}};
+		// If we can't compare similarity, fall back to standard get.
+		if (similarityComparator == null) {
+			logger.warning("Similarity comparison not supported, using get(key)");
+			final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
+			return new HashSet<Map.Entry<K,V>>() {{
+				add(result);
+			}};
+		}
+
+		// TODO: use more efficient impl than brute-force search of entire keyset :)
+		Set<K> keys = keySet();
+		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+
+		for (K candidate : keys) {
+			float sim = similarityComparator.similarity(key, candidate);
+			if (sim >= threshold) {
+				final Map.Entry<K,V> entry = new AbstractMap.SimpleImmutableEntry<>(key, get(key));
+				results.add(entry);
+			}
+		}
+
+		return results;
 	}
 
 	public V put(K key, V value) throws OutOfHeapException {

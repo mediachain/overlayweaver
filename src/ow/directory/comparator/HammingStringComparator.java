@@ -20,13 +20,13 @@ public class HammingStringComparator implements KeySimilarityComparator<String> 
   }
 
   @Override
-  public double similarity(String key1, String key2) {
+  public float similarity(String key1, String key2) {
     if (key1.length() == 0) {
       throw new IllegalArgumentException("Key length must be > 0");
     }
 
-    final double len = key1.length();
-    final double dist = distance(key1, key2);
+    final float len = key1.length();
+    final float dist = distance(key1, key2);
 
     return dist / len;
   }

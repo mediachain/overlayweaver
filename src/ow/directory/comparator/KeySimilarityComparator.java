@@ -7,5 +7,5 @@ import java.util.Comparator;
  */
 public interface KeySimilarityComparator<K> {
 
-  double similarity(K key1, K key2);
+  float similarity(K key1, K key2);
 }
