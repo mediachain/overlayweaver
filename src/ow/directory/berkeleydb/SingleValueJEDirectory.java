@@ -41,11 +41,16 @@ public class SingleValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implem
 		super(typeK, typeV, env, dbName, false, similarityComparator);
 	}
 
-	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+	public SortedMap<K,V> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
-		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+
+		TreeMap<K,V> results = (similarityComparator == null) ?
+				new TreeMap<>() :
+				new TreeMap<>(similarityComparator.comparatorForKey(key));
+
 		for (K k : keys) {
-			results.add(new AbstractMap.SimpleImmutableEntry<K,V>(k, this.get(k)));
+			results.put(k, this.get(k));
 		}
 
 		return results;

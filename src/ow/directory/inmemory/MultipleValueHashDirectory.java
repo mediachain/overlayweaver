@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import ow.directory.DirectoryConfiguration;
 import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 
 public final class MultipleValueHashDirectory<K,V> implements MultiValueDirectory<K,V> {
 	SingleValueDirectory<K,Map<V,V>> internalDir;
@@ -50,19 +51,42 @@ public final class MultipleValueHashDirectory<K,V> implements MultiValueDirector
 	}
 
 	@Override
-	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.internalDir.getSimilarityComparator();
+	}
+
+	@Override
+	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
 		return this.internalDir.getSimilarKeys(key, threshold);
 	}
 
-	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+	public SortedMap<K,Set<V>> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
 
-		Set<Map.Entry<K, Set<V>>> ret = new HashSet<>();
-		for (K k : keys) {
-			ret.add(new AbstractMap.SimpleImmutableEntry<>(k, get(k)));
+		TreeMap<K,Set<V>> results;
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+		if (similarityComparator == null) {
+			results = new TreeMap<>();
+		} else {
+			results = new TreeMap<>(similarityComparator.comparatorForKey(key));
 		}
-		return ret;
+
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+
+		return results;
 	}
+
+//	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+//		Set<K> keys = getSimilarKeys(key, threshold);
+//
+//		Set<Map.Entry<K, Set<V>>> ret = new HashSet<>();
+//		for (K k : keys) {
+//			ret.add(new AbstractMap.SimpleImmutableEntry<>(k, get(k)));
+//		}
+//		return ret;
+//	}
 
 	public V put(K key, V value) throws Exception {
 		V ret = null;

@@ -17,10 +17,7 @@
 
 package ow.directory.berkeleydb;
 
-import java.util.AbstractMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 
 import ow.directory.MultiValueDirectory;
@@ -45,12 +42,16 @@ public class MultiValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> impleme
 		return getAndRemove(key, false);
 	}
 
-	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+	public SortedMap<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
-		HashSet<Map.Entry<K, Set<V>>> results = new HashSet<>();
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+
+		TreeMap<K,Set<V>> results = (similarityComparator == null) ?
+				new TreeMap<>() :
+				new TreeMap<>(similarityComparator.comparatorForKey(key));
 
 		for (K k : keys) {
-			results.add(new AbstractMap.SimpleImmutableEntry<>(k, this.get(k)));
+			results.put(k, this.get(k));
 		}
 		return results;
 	}

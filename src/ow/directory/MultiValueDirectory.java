@@ -21,6 +21,8 @@ import ow.directory.comparator.KeySimilarityComparator;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 
 /**
  *	A directory that maps keys to values.
@@ -35,17 +37,23 @@ public interface MultiValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	Set<V> get(K key) throws Exception;
 
 	/**
+	 * Returns the comparator used to determine key similarity.
+	 * @return null if similarity comparison is not supported
+   */
+	KeySimilarityComparator<K> getSimilarityComparator();
+
+	/**
 	 * Returns the set of keys similar to `key` within `threshold`,
 	 * using the KeySimilarityComparator specified in the config.
 	 * @return empty set if no similar keys are found
    */
-	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
+	SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception;
 
 	/**
 	 * Returns a set of key/value pairs for keys that are similar to `key`, within `threshold`
 	 * @return null if no values are found
    */
-	Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception;
+	SortedMap<K,Set<V>> getSimilar(K key, float threshold) throws Exception;
 
 	/**
 	 * Puts a pair of the specified key and value.

@@ -130,20 +130,24 @@ public abstract class AbstractJEDirectory<K,V> {
 		}
 	}
 
-	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.similarityComparator;
+	}
+
+	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
 		if (similarityComparator == null) {
 			logger.warning("Similarity comparison not supported");
 			if (this.keySet().contains(key)) {
-				return new HashSet<K>() {{
+				return new TreeSet<K>() {{
 					add(key);
 				}};
 			}
-			return new HashSet<>();
+			return new TreeSet<>();
 		}
 
 		// TODO: use more efficient impl than brute-force search of entire keyset :)
 		Set<K> keys = keySet();
-		HashSet<K> results = new HashSet<>();
+		TreeSet<K> results = new TreeSet<>(similarityComparator.comparatorForKey(key));
 
 		for (K candidate : keys) {
 			float sim = similarityComparator.similarity(key, candidate);

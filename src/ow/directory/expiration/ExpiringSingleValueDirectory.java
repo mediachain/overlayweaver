@@ -18,13 +18,11 @@
 package ow.directory.expiration;
 
 import java.io.Serializable;
-import java.util.AbstractMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 import ow.util.Timer;
 
 public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory<K,V>
@@ -111,17 +109,27 @@ public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory
 		return getAndRemove(key, false);
 	}
 
-	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return internalDirectory.getSimilarityComparator();
+	}
+
+	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
 		return internalDirectory.getSimilarKeys(key, threshold);
 	}
 
-	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+	public SortedMap<K, V> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
-		HashSet<Map.Entry<K,V>> results = new HashSet<>();
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+		TreeMap<K,V> results;
+		if (similarityComparator == null) {
+			results = new TreeMap<>();
+		} else {
+			results = new TreeMap<>(similarityComparator.comparatorForKey(key));
+		}
 
 		for (K k : keys) {
-			final Map.Entry<K,V> entry = new AbstractMap.SimpleImmutableEntry<>(k, get(k));
-			results.add(entry);
+			results.put(k, this.get(k));
 		}
 
 		return results;
