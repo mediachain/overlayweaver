@@ -23,14 +23,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.AbstractMap;
 
 import ow.directory.DirectoryConfiguration;
 import ow.directory.DirectoryConfiguration.HeapOverflowAction;
@@ -121,6 +117,14 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 
 	public V get(K key) {
 		return this.map.get(key);
+	}
+
+	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,V>>() {{
+			add(result);
+		}};
 	}
 
 	public V put(K key, V value) throws OutOfHeapException {

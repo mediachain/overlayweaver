@@ -23,6 +23,8 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.Transaction;
 
+import java.util.*;
+
 /**
  * A directory that maps a key to a value.
  * This directory (hash table) does not allow multiple values for a key. 
@@ -33,6 +35,14 @@ import com.sleepycat.je.Transaction;
 public class SingleValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implements SingleValueDirectory<K,V> {
 	protected SingleValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName) throws Exception {
 		super(typeK, typeV, env, dbName, false);
+	}
+
+	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,V>>() {{
+			add(result);
+		}};
 	}
 
 	public V get(K key) throws DatabaseException {

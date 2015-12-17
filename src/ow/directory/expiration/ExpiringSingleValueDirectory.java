@@ -18,6 +18,9 @@
 package ow.directory.expiration;
 
 import java.io.Serializable;
+import java.util.AbstractMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import ow.directory.SingleValueDirectory;
@@ -104,6 +107,14 @@ public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory
 
 	public V get(K key) throws Exception {
 		return getAndRemove(key, false);
+	}
+
+	public Set<Map.Entry<K,V>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,V> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,V>>() {{
+			add(result);
+		}};
 	}
 
 	public V remove(K key) throws Exception {

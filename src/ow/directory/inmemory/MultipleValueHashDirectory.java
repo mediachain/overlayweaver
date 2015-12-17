@@ -17,12 +17,8 @@
 
 package ow.directory.inmemory;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import ow.directory.DirectoryConfiguration;
 import ow.directory.MultiValueDirectory;
@@ -51,6 +47,14 @@ public final class MultipleValueHashDirectory<K,V> implements MultiValueDirector
 		}
 
 		return ret;
+	}
+
+	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,Set<V>>>() {{
+			add(result);
+		}};
 	}
 
 	public V put(K key, V value) throws Exception {

@@ -16,10 +16,8 @@
 
 package ow.directory;
 
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * An adapter which converts a {@link SingleValueDirectory SingleValueDirectory}
@@ -42,6 +40,14 @@ public final class MultiValueAdapterForSingleValueDirectory<K,V> implements Mult
 		}
 
 		return ret;
+	}
+
+	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,Set<V>>>() {{
+			add(result);
+		}};
 	}
 
 	public V remove(K key, V value) throws Exception {

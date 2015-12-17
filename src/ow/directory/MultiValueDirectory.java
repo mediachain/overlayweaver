@@ -33,6 +33,12 @@ public interface MultiValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	Set<V> get(K key) throws Exception;
 
 	/**
+	 * Returns a set of key/value pairs for keys that are similar to `key`, within `threshold`
+	 * @return null if no values are found
+   */
+	Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception;
+
+	/**
 	 * Puts a pair of the specified key and value.
 	 * Multiple values associated to the same key can be stored, but same values (equals()) are unified.
 	 */

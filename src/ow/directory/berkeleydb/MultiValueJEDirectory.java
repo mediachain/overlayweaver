@@ -17,7 +17,9 @@
 
 package ow.directory.berkeleydb;
 
+import java.util.AbstractMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 
@@ -38,6 +40,14 @@ public class MultiValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> impleme
 
 	public Set<V> get(K key) throws DatabaseException {
 		return getAndRemove(key, false);
+	}
+
+	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+		// TODO: implement!
+		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
+		return new HashSet<Map.Entry<K,Set<V>>>() {{
+			add(result);
+		}};
 	}
 
 	public V put(K key, V value) throws Exception {
