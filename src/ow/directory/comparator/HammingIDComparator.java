@@ -49,6 +49,7 @@ public class HammingIDComparator implements KeySimilarityComparator<ID>, Seriali
 
     final float hammingDistance =
         key1.toBigInteger().xor(key2.toBigInteger()).bitCount();
-    return hammingDistance / keySizeInBits;
+
+    return (keySizeInBits - hammingDistance) / keySizeInBits;
   }
 }

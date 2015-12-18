@@ -56,6 +56,6 @@ public class HammingStringComparator implements KeySimilarityComparator<String>,
     final float len = key1.length();
     final float dist = distance(key1, key2);
 
-    return dist / len;
+    return (len - dist) / len;
   }
 }
