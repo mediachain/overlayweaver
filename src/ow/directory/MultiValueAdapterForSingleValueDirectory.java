@@ -16,6 +16,8 @@
 
 package ow.directory;
 
+import ow.directory.comparator.KeySimilarityComparator;
+
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -42,12 +44,25 @@ public final class MultiValueAdapterForSingleValueDirectory<K,V> implements Mult
 		return ret;
 	}
 
-	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
-		// TODO: implement!
-		final Map.Entry<K,Set<V>> result = new AbstractMap.SimpleEntry<>(key, get(key));
-		return new HashSet<Map.Entry<K,Set<V>>>() {{
-			add(result);
-		}};
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.dir.getSimilarityComparator();
+	}
+
+	@Override
+	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return this.dir.getSimilarKeys(key, threshold);
+	}
+
+	public SortedMap<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
+		final SortedMap<K, V> vals = this.dir.getSimilar(key, threshold);
+		TreeMap<K, Set<V>> ret = new TreeMap<>();
+		for (K k : vals.keySet()) {
+			Set<V> valSet = new HashSet<>();
+			valSet.add(vals.get(k));
+			ret.put(k, valSet);
+		}
+		return ret;
 	}
 
 	public V remove(K key, V value) throws Exception {

@@ -318,7 +318,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 			return routingRes;
 		}
 
-		Serializable[][] args = new Serializable[keys.length][2];
+		Serializable[][] args = new Serializable[keys.length][3];
 		for (int i = 0; i < keys.length; i++) {
 			args[i][0] = CALLBACK_NAME_GET_SIMILAR;
 			args[i][1] = keys[i];

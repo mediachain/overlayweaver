@@ -52,7 +52,7 @@ public class DHTConfiguration extends HighLevelServiceConfiguration {
 
 	public final static String DEFAULT_VALUE_ENCODING = "UTF-8";
 
-	public final static boolean DEFAULT_SEARCH_KEYS_FOR_SIMILARITY = false;
+	public final static boolean DEFAULT_SEARCH_KEYS_FOR_SIMILARITY = true;
 
 
 
