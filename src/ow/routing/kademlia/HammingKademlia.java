@@ -83,12 +83,15 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 		return BigInteger.valueOf(fromInt.xor(toInt).bitCount());
 	}
 
+	private boolean isOurID(ID id) {
+		return this.selfIDAddress.getID().toBigInteger().compareTo(id.toBigInteger()) == 0;
+	}
+
 	public IDAddressPair[] nextHopCandidates(ID targetID, ID lastHop /*ignored*/, boolean joining,
 			int maxNum, RoutingContext cxt) {
 		final IDAddressPair[] results = new IDAddressPair[maxNum];
 
-		BigInteger distance = distance(targetID, selfIDAddress.getID());
-		int highestSetBit = distance.bitLength() - 1;
+		int distance = distance(targetID, selfIDAddress.getID()).intValue();
 
 		Comparator<IDAddressPair> comparator =
 			new AlgoBasedTowardTargetIDAddrComparator(this, targetID);
@@ -98,20 +101,18 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 		int index = 0;
 		KBucket kb;
 
-		if (highestSetBit >= 0) {	// this node is not the target
-			kb = this.kBuckets[highestSetBit];
+		if (distance > 0) {	// this node is not the target
+			kb = this.kBuckets[distance];
 			if (kb != null) {
 				index = pickNodes(index, results, kb, comparator);
 				if (index >= results.length) return results;		// fulfilled
 			}
 
-			for (int i = highestSetBit - 1; i >= 0; i--) {
-				if (distance.testBit(i)) {
-					kb = this.kBuckets[i];
-					if (kb != null) {
-						index = pickNodes(index, results, kb, comparator);
-						if (index >= results.length) return results;	// fulfilled
-					}
+			for (int i = distance - 1; i >= 0; i--) {
+				kb = this.kBuckets[i];
+				if (kb != null) {
+					index = pickNodes(index, results, kb, comparator);
+					if (index >= results.length) return results;	// fulfilled
 				}
 			}
 		}
@@ -121,19 +122,17 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 			if (index >= results.length) return results;			// fulfilled
 		}
 
-		if (highestSetBit >= 0) {	// this node is not the target
-			for (int i = 0; i < highestSetBit; i++) {
-				if (!distance.testBit(i)) {
-					kb = this.kBuckets[i];
-					if (kb != null) {
-						index = pickNodes(index, results, kb, comparator);
-						if (index >= results.length) return results;	// fulfilled
-					}
+		if (distance > 0) {	// this node is not the target
+			for (int i = distance; i < this.numKBuckets; i++) {
+				kb = this.kBuckets[i];
+				if (kb != null) {
+					index = pickNodes(index, results, kb, comparator);
+					if (index >= results.length) return results;	// fulfilled
 				}
 			}
 		}
 
-		for (int i = highestSetBit + 1; i < this.numKBuckets; i++) {
+		for (int i = distance + 1; i < this.numKBuckets; i++) {
 			kb = this.kBuckets[i];
 			if (kb != null) {
 				index = pickNodes(index, results, kb, comparator);
@@ -204,19 +203,18 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 	}
 
 	public void touch(IDAddressPair from) {
-		BigInteger distance = distance(from.getID(), selfIDAddress.getID());
-		int highestSetBit = distance.bitLength() - 1;
-
-		if (highestSetBit < 0) {
+		if (from.getID().compareTo(selfIDAddress.getID()) == 0) {
 			// from is myself, and ignore
 			return;
 		}
 
+		int distance = distance(from.getID(), selfIDAddress.getID()).intValue();
+
 		KBucket kb;
 		synchronized (this.kBuckets) {
-			kb = this.kBuckets[highestSetBit];
+			kb = this.kBuckets[distance];
 			if (kb == null) {
-				kBuckets[highestSetBit] = kb = new KBucket(this);
+				kBuckets[distance] = kb = new KBucket(this);
 			}
 		}
 		kb.appendToTail(from);
@@ -226,20 +224,19 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 	 * Remove the specified node from k-buckets.
 	 */
 	public void forget(IDAddressPair failedNode) {
-		BigInteger distance = distance(failedNode.getID(), selfIDAddress.getID());
-		int highestSetBit = distance.bitLength() - 1;
 
-		if (highestSetBit < 0) {
+		if (failedNode.getID().compareTo(selfIDAddress.getID()) == 0) {
 			// from is myself, and ignore
 			return;
 		}
+		int distance = distance(failedNode.getID(), selfIDAddress.getID()).intValue();
 
 		synchronized (this.kBuckets) {
-			KBucket kb = this.kBuckets[highestSetBit];
+			KBucket kb = this.kBuckets[distance];
 			if (kb != null) {
 				kb.remove(failedNode);
 				if (kb.size() <= 0) {
-					this.kBuckets[highestSetBit] = null;
+					this.kBuckets[distance] = null;
 				}
 			}
 		}
