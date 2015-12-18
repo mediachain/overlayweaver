@@ -2,7 +2,8 @@
   (:import
     [ow.dht DHTFactory DHT DHTConfiguration]
     [ow.routing RoutingAlgorithmProvider RoutingAlgorithmFactory RoutingAlgorithmConfiguration RoutingServiceFactory RoutingService]
-    [ow.messaging Signature MessagingFactory MessagingConfiguration]))
+    [ow.messaging Signature MessagingFactory MessagingConfiguration]
+    [ow.id ID]))
 
 (defn get-working-dir []
   (System/getProperty "user.dir"))
@@ -142,10 +143,15 @@
             :self-hostname hostname
             :self-port port})))
 
+
 (defn dht
   ^DHT
   [& opts]
   (let [opts (merge defaults (apply hash-map opts))
+        self-id (or (:self-id opts) ; need to specify an ID if id-bytes > length of SHA1
+                    (when (> :id-bytes 20)
+                      (ID/getRandomID (:id-bytes opts)))
+        opts (assoc opts :self-id self-id)
         dht-cfg (dht-config opts)
         algo-provider (algorithm-provider (:algorithm opts))
         algo-config (algorithm-config algo-provider opts)
