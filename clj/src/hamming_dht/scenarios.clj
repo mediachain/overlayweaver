@@ -14,7 +14,7 @@
 
 
 (defn long->id [_key long-val]
-  (ID/parseID (long->id-str long-val) 20))
+  (ID/parseID (long->id-str long-val) id-size-bytes))
 
 (defn filenames-and-hashes
   [file]

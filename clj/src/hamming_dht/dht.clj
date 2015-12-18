@@ -150,7 +150,7 @@
   (let [opts (merge defaults (apply hash-map opts))
         self-id (or (:self-id opts) ; need to specify an ID if id-bytes > length of SHA1
                     (when (> :id-bytes 20)
-                      (ID/getRandomID (:id-bytes opts)))
+                      (ID/getRandomID (:id-bytes opts))))
         opts (assoc opts :self-id self-id)
         dht-cfg (dht-config opts)
         algo-provider (algorithm-provider (:algorithm opts))
