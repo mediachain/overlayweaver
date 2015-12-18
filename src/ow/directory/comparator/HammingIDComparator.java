@@ -18,12 +18,25 @@ public class HammingIDComparator implements KeySimilarityComparator<ID>, Seriali
 
     @Override
     public int compare(ID k1, ID k2) {
-      int sim1 = (int) (HammingIDComparator.getSimilarity(reference, k1) * 100.0);
-      int sim2 = (int) (HammingIDComparator.getSimilarity(reference, k2) * 100.0);
+      int sim1 = (int) (HammingIDComparator.getSimilarity(reference, k1) * 10000.0);
+      int sim2 = (int) (HammingIDComparator.getSimilarity(reference, k2) * 10000.0);
       return sim1 - sim2;
     }
   }
 
+  public static int hammingDistance(ID key1, ID key2) {
+    if (key1.getSize() != key2.getSize()) {
+      throw new IllegalArgumentException("Keys must have equal sizes for similarity comparison");
+    }
+
+    final float keySizeInBits = key1.getSize() * 8;
+    if (keySizeInBits == 0) {
+      // yay, paranoia!
+      throw new IllegalArgumentException("Key size of zero is invalid.");
+    }
+
+    return key1.toBigInteger().xor(key2.toBigInteger()).bitCount();
+  }
 
   @Override
   public Comparator<ID> comparatorForKey(ID reference) {
@@ -36,19 +49,9 @@ public class HammingIDComparator implements KeySimilarityComparator<ID>, Seriali
   }
 
   public static float getSimilarity(ID key1, ID key2) {
-    if (key1.getSize() != key2.getSize()) {
-      throw new IllegalArgumentException("Keys must have equal sizes for similarity comparison");
-    }
 
-    final float keySizeInBits = key1.getSize() * 8;
-    if (keySizeInBits == 0) {
-      // yay, paranoia!
-      throw new IllegalArgumentException("Key size of zero is invalid.");
-    }
-
-    final float hammingDistance =
-        key1.toBigInteger().xor(key2.toBigInteger()).bitCount();
-
-    return (keySizeInBits - hammingDistance) / keySizeInBits;
+    double hamming = hammingDistance(key1, key2);
+    double keySizeInBits = key1.getSize() * 8;
+    return (float)((keySizeInBits - hamming) / keySizeInBits);
   }
 }
