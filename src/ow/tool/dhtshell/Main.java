@@ -35,20 +35,7 @@ import ow.dht.DHTFactory;
 import ow.messaging.Signature;
 import ow.messaging.util.AccessController;
 import ow.oasis.OASISResponder;
-import ow.tool.dhtshell.commands.ClearCommand;
-import ow.tool.dhtshell.commands.GetCommand;
-import ow.tool.dhtshell.commands.HaltCommand;
-import ow.tool.dhtshell.commands.HelpCommand;
-import ow.tool.dhtshell.commands.InitCommand;
-import ow.tool.dhtshell.commands.LocaldataCommand;
-import ow.tool.dhtshell.commands.PutCommand;
-import ow.tool.dhtshell.commands.QuitCommand;
-import ow.tool.dhtshell.commands.RemoveCommand;
-import ow.tool.dhtshell.commands.ResumeCommand;
-import ow.tool.dhtshell.commands.SetSecretCommand;
-import ow.tool.dhtshell.commands.SetTTLCommand;
-import ow.tool.dhtshell.commands.StatusCommand;
-import ow.tool.dhtshell.commands.SuspendCommand;
+import ow.tool.dhtshell.commands.*;
 import ow.tool.emulator.EmulatorControllable;
 import ow.tool.util.shellframework.Command;
 import ow.tool.util.shellframework.MessagePrinter;
@@ -72,7 +59,7 @@ public final class Main extends AbstractDHTBasedTool<String>
 	private final static Class/*Command<<DHT<String>>>*/[] COMMANDS = {
 		StatusCommand.class,
 		InitCommand.class,
-		GetCommand.class, PutCommand.class, RemoveCommand.class,
+		GetCommand.class, PutCommand.class, RemoveCommand.class, GetSimilarCommand.class,
 		SetTTLCommand.class, SetSecretCommand.class,
 		LocaldataCommand.class,
 //		SourceCommand.class,
