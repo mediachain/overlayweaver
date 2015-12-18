@@ -22,9 +22,9 @@ import java.util.logging.Level;
  * http://ce-resd.facom.ufms.br/sbrc/2012/ST4_2.pdf
  */
 
-public class Hamming extends Chord {
+public class HammingChord extends Chord {
 
-  protected Hamming(RoutingAlgorithmConfiguration config, RoutingService routingService)
+  protected HammingChord(RoutingAlgorithmConfiguration config, RoutingService routingService)
       throws InvalidAlgorithmParameterException {
     super(config, routingService);
   }

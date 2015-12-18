@@ -4,7 +4,7 @@
 
 (def hamming-config
   (doto (DHTFactory/getDefaultConfiguration)
-    (.setRoutingAlgorithm "Hamming")
+    (.setRoutingAlgorithm "HammingChord")
     (.setSearchKeysForSimilarity true)))
 
 (def dht (DHTFactory/getDHT hamming-config))

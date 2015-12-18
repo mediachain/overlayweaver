@@ -10,8 +10,8 @@ import java.security.InvalidAlgorithmParameterException;
 /**
  * Created by yusef on 12/15/15.
  */
-public class HammingProvider implements RoutingAlgorithmProvider {
-  private final static String ALGORITHM_NAME = "Hamming";
+public class HammingChordProvider implements RoutingAlgorithmProvider {
+  private final static String ALGORITHM_NAME = "HammingChord";
 
   public String getName() { return ALGORITHM_NAME; }
 
@@ -21,6 +21,6 @@ public class HammingProvider implements RoutingAlgorithmProvider {
 
   @Override
   public RoutingAlgorithm initializeAlgorithmInstance(RoutingAlgorithmConfiguration conf, RoutingService routingSvc) throws InvalidAlgorithmParameterException {
-    return new Hamming(conf, routingSvc);
+    return new HammingChord(conf, routingSvc);
   }
 }

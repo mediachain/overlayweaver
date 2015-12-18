@@ -1,7 +1,6 @@
 package ow.directory.comparator;
 
 import ow.id.ID;
-import ow.routing.chord.Hamming;
 
 import java.io.Serializable;
 import java.util.Comparator;
