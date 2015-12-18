@@ -1,4 +1,4 @@
-(ns hamming-dht.core
+(ns hamming-dht.dht
   (:import
     [ow.dht DHTFactory DHT DHTConfiguration]
     [ow.routing RoutingAlgorithmProvider RoutingAlgorithmFactory RoutingAlgorithmConfiguration RoutingServiceFactory RoutingService]
