@@ -30,6 +30,7 @@ public class RoutingAlgorithmFactory {
 		ow.routing.chord.HammingProvider.class,	// "Hamming"
 		ow.routing.chord.ChordProvider.class,					// "Chord"
 		ow.routing.kademlia.KademliaProvider.class,			// "Kademlia"
+		ow.routing.kademlia.HammingKademliaProvider.class, // "HammingKademlia"
 		ow.routing.koorde.KoordeProvider.class,				// "Koorde"
 		ow.routing.linearwalker.LinearWalkerProvider.class,	// "LinearWalker"
 		ow.routing.pastry.PastryProvider.class,				// "Pastry"
