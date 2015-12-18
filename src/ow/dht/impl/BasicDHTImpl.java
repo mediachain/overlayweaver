@@ -253,7 +253,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
 		throws RoutingException {
 		ID[] keys = { key };
-		float[] thresholds = { threshold };
+		Float[] thresholds = { threshold };
 		SortedMap<ID, Set<ValueInfo<V>>>[] results = new SortedMap[keys.length];
 		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results);
 
@@ -300,7 +300,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	protected RoutingResult[] getSimilarRemotely(ID[] keys,
-																							 float[] thresholds,
+																							 Float[] thresholds,
 																							 SortedMap<ID, Set<ValueInfo<V>>>[] results) {
 		if (!config.getSearchKeysForSimilarity()) {
 			// fallback to getRemotely()
@@ -338,7 +338,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 			if (routingRes[i] == null) continue;
 
 			if (callbackResultContainer[i] != null)
-				results[i] = (SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+				results[i] = (TreeMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
 
 			if (results[i] == null) results[i] = new TreeMap<>();
 			// routing succeeded and results[i] should not be null.
@@ -896,7 +896,8 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		getSimilarValuesLocally(ID key, float threshold, MultiValueDirectory<ID, ValueInfo<V>> dir) {
 
 		try {
-			return dir.getSimilar(key, threshold);
+			SortedMap<ID, Set<ValueInfo<V>>> result = dir.getSimilar(key, threshold);
+			return result;
 		} catch (Exception e) {
 			logger.log(Level.WARNING, "An Exception thrown by Directory#getSimilar().", e);
 			return null;

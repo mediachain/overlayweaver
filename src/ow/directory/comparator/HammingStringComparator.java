@@ -2,23 +2,33 @@ package ow.directory.comparator;
 
 import ow.id.ID;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 /**
  * Created by yusef on 12/17/15.
  */
-public class HammingStringComparator implements KeySimilarityComparator<String> {
+public class HammingStringComparator implements KeySimilarityComparator<String>, Serializable {
+  public class KeyComparator implements Comparator<String>, Serializable {
+    private final String reference;
+    public KeyComparator(String reference) {
+      this.reference = reference;
+    }
+
+    @Override
+    public int compare(String k1, String k2) {
+      int sim1 = (int) (HammingStringComparator.getSimilarity(reference, k1) * 100.0);
+      int sim2 = (int) (HammingStringComparator.getSimilarity(reference, k2) * 100.0);
+      return sim1 - sim2;
+    }
+  }
 
   @Override
   public Comparator<String> comparatorForKey(String reference) {
-    return (k1, k2) -> {
-      int sim1 = (int) (HammingStringComparator.this.similarity(reference, k1) * 100.0);
-      int sim2 = (int) (HammingStringComparator.this.similarity(reference, k2) * 100.0);
-      return sim1 - sim2;
-    };
+    return new KeyComparator(reference);
   }
 
-  public int distance(String key1, String key2) {
+  public static int distance(String key1, String key2) {
     if (key1 == null || key2 == null || key1.length() != key2.length()) {
       throw new IllegalArgumentException();
     }
@@ -32,8 +42,13 @@ public class HammingStringComparator implements KeySimilarityComparator<String> 
     return distance;
   }
 
+
   @Override
   public float similarity(String key1, String key2) {
+    return HammingStringComparator.getSimilarity(key1, key2);
+  }
+
+  public static float getSimilarity(String key1, String key2) {
     if (key1.length() == 0) {
       throw new IllegalArgumentException("Key length must be > 0");
     }
