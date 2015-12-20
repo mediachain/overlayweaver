@@ -132,13 +132,15 @@
 (defn dht-info
   [^DHT dht]
   (let [id-addr (.getSelfIDAddressPair dht)
+        id (.getID id-addr)
         addr (.getAddress id-addr)
         hostname (.getHostname addr)
         host (.getHostAddress addr)
         port (.getPort addr)
         cfg-info (dht-config-info (.getConfiguration dht))]
     (merge cfg-info
-           {:id (.getID id-addr)
+           {:id id
+            :id-bytes (.getSize id)
             :self-address host
             :self-hostname hostname
             :self-port port})))
@@ -149,7 +151,7 @@
   [& opts]
   (let [opts (merge defaults (apply hash-map opts))
         self-id (or (:self-id opts) ; need to specify an ID if id-bytes > length of SHA1
-                    (when (> :id-bytes 20)
+                    (when (> (:id-bytes opts) 20)
                       (ID/getRandomID (:id-bytes opts))))
         opts (assoc opts :self-id self-id)
         dht-cfg (dht-config opts)
