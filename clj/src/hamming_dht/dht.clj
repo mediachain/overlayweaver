@@ -148,8 +148,8 @@
 
 (defn dht
   ^DHT
-  [& opts]
-  (let [opts (merge defaults (apply hash-map opts))
+  [opts]
+  (let [opts (merge defaults opts)
         self-id (or (:self-id opts) ; need to specify an ID if id-bytes > length of SHA1
                     (when (> (:id-bytes opts) 20)
                       (ID/getRandomID (:id-bytes opts))))
