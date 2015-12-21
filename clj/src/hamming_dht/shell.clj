@@ -18,7 +18,7 @@
            [java.net InetAddress]
            [ow.messaging.util MessagingUtility$HostAndPort MessagingUtility]
            [ow.stat StatConfiguration StatFactory]
-           [ow.dht DHTFactory]
+           [ow.dht DHTFactory DHT]
            [ow.tool.dhtshell Main$ShowPromptPrinter Main$NoCommandPrinter]))
 
 
@@ -128,11 +128,13 @@
 (defn parse-cli
   [args]
   (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-opts)
-        contact-addr (parse-contact-addr arguments)]
+        contact-addr (parse-contact-addr arguments)
+        shell-opts (into {:contact-address contact-addr}
+                         (select-keys options shell-cli-opts))]
     (cond
       (:help options) (exit 0 (usage summary))
       errors (exit 1 (error-msg errors)))
-    {:shell-opts (select-keys options shell-cli-opts)
+    {:shell-opts shell-opts
      :dht-opts (format-dht-opts options)}))
 
 (def prompt-printer
@@ -159,12 +161,26 @@
                 shell-port
                 nil)) ; AccessController (implement if we want ACLs)
 
+(defn join-overlay
+  [dht-instance contact-addr-map]
+  (try
+    (.joinOverlay dht-instance
+                  (:host contact-addr-map)
+                  (:port contact-addr-map))
+    (catch Exception e
+      (println "Error joining overlay: " e))))
+
 (defn dht-shell
   ^Shell
   [args in-stream out-stream interactive?]
   (let [{:keys [dht-opts shell-opts]} (parse-cli args)
         dht-instance (dht/dht dht-opts)
         server (shell-server dht-instance (get shell-opts :shell-port -1))]
+    (if-let [stats (:stat-collector-address-map shell-opts)]
+      (.setStatCollectorAddress dht-instance (:host stats) (:port stats)))
+    (if (:contact-address shell-opts)
+      (join-overlay dht-instance (:contact-address shell-opts)))
+
     (Shell. in-stream out-stream server dht-instance interactive?)))
 
 (defn -init [] [[] (atom {:shell nil})])
