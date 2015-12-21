@@ -10,14 +10,15 @@
 
 (def defaults
   {:routing-style "Iterative"
-   :algorithm "HammingChord"
-   :transport "UDP"
-   :working-dir (get-working-dir)
-   :app-id 1
-   :app-version 1
-   :id-bytes 20
-   :self-port 3997
-   :self-id nil})
+   :algorithm     "HammingKademlia"
+   :transport     "UDP"
+   :working-dir   (get-working-dir)
+   :app-id        1
+   :app-version   1
+   :id-byte-len   20
+   :self-address-map {:host "localhost" :port 3997}
+   :stat-collector-address-map {:host "localhost"}
+   :self-id       nil})
 
 
 (defn algorithm-provider ^RoutingAlgorithmProvider
@@ -47,11 +48,11 @@
   ^RoutingAlgorithmConfiguration
   [algorithm opts]
   (let [opts (merge defaults opts)
-        {:keys [id-bytes]} opts
+        {:keys [id-byte-len]} opts
         provider (algorithm-provider algorithm)
         config (.getDefaultConfiguration provider)]
-   (when (integer? id-bytes)
-     (.setIDSizeInByte config id-bytes))
+   (when (integer? id-byte-len)
+     (.setIDSizeInByte config id-byte-len))
    config))
 
 
@@ -112,7 +113,8 @@
   ^DHTConfiguration
   [opts]
   (let [opts (merge defaults opts)
-        {:keys [algorithm transport working-dir self-address self-port]} opts]
+        {:keys [algorithm transport working-dir self-address-map]} opts
+        {self-address :host self-port :port} self-address-map]
     (doto (DHTFactory/getDefaultConfiguration)
       (.setRoutingAlgorithm algorithm)
       (.setMessagingTransport transport)
@@ -139,26 +141,52 @@
         port (.getPort addr)
         cfg-info (dht-config-info (.getConfiguration dht))]
     (merge cfg-info
-           {:id id
-            :id-bytes (.getSize id)
-            :self-address host
+           {:id            id
+            :id-byte-len   (.getSize id)
+            :self-address  host
             :self-hostname hostname
-            :self-port port})))
+            :self-port     port})))
 
+(defn- id-string
+  "Ensures that string `s` is prefixed with \"id:\",
+  suitable for passing to (ID/parseID str len).
+  Returns nil if `s` is not a string."
+  [s]
+  (cond
+    (not (string? s)) nil
+    (.startsWith s "id:") s
+    :else (str "id:" s)))
+
+(defn opts->self-id
+  "If `opts` contains a key :self-id-str, attempts to create
+  an overlayweaver ID by parsing it using the :id-byte-len length
+  from `opts`.
+  If no :self-id-str key is present *and* the length of IDs is
+  greater than 20 bytes (size of SHA-1 digest), a random ID is
+  generated to avoid an exception when OW tries to assign an
+  SHA-1 based id for us.
+  If no :self-id-str key is present and IDs are <= 20 bytes in
+  length, return nil for default SHA-1 based id."
+  [opts]
+  (let [{:keys [id-byte-len]} opts]
+    (if-let [s (id-string (:self-id-str opts))]
+      (ID/parseID s id-byte-len)
+      (when (> id-byte-len 20)
+        (println "id length > 20, generating random id")
+        (ID/getRandomID id-byte-len)))))
 
 (defn dht
   ^DHT
-  [opts]
-  (let [opts (merge defaults opts)
-        self-id (or (:self-id opts) ; need to specify an ID if id-bytes > length of SHA1
-                    (when (> (:id-bytes opts) 20)
-                      (ID/getRandomID (:id-bytes opts))))
-        opts (assoc opts :self-id self-id)
-        dht-cfg (dht-config opts)
-        algo-provider (algorithm-provider (:algorithm opts))
-        algo-config (algorithm-config algo-provider opts)
-        routing-svc (routing-service dht-cfg algo-provider algo-config opts)]
-    (.setSelfPort dht-cfg (-> routing-svc .getMessageReceiver .getPort))
-    (.initializeAlgorithmInstance algo-provider algo-config routing-svc)
-    (DHTFactory/getDHT dht-cfg routing-svc)))
+  ([] (dht {}))
+  ([opts]
+   (let [opts (merge defaults opts)
+         self-id (opts->self-id opts)
+         opts (assoc opts :self-id self-id)
+         dht-cfg (dht-config opts)
+         algo-provider (algorithm-provider (:algorithm opts))
+         algo-config (algorithm-config algo-provider opts)
+         routing-svc (routing-service dht-cfg algo-provider algo-config opts)]
+     (.setSelfPort dht-cfg (-> routing-svc .getMessageReceiver .getPort))
+     (.initializeAlgorithmInstance algo-provider algo-config routing-svc)
+     (DHTFactory/getDHT dht-cfg routing-svc))))
 

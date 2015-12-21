@@ -12,9 +12,9 @@
 
 
 (def dht-opts
-  {:algorithm "Kademlia"
-   :id-bytes 20
-   :upnp? false})
+  {:algorithm   "Kademlia"
+   :id-byte-len 20
+   :upnp?       false})
 
 (def ^{:private true}
   test-dht (dht/dht dht-opts))
@@ -37,7 +37,7 @@
 
 (def id-gen
   "A generator which returns an overlayweaver ID of the length set in the `dht-opts` var."
-  (id-gen* (:id-bytes dht-opts)))
+  (id-gen* (:id-byte-len dht-opts)))
 
 (defn- sim->hamming
   "Given a similarity float `sim` in the range 0.0 - 1.0 and the size of the ID space `bit-length`,
