@@ -37,54 +37,20 @@ import java.util.logging.Level;
  * A RoutingAlgorithm implementing Kademlia, but which uses
  * Hamming distance as its distance metric instead of XOR.
  */
-public final class HammingKademlia extends AbstractRoutingAlgorithm {
-	private final KademliaConfiguration config;
-
-	// k-buckets
-	private final int numKBuckets;
-	private final KBucket[] kBuckets;
-	final int kBucketLength;	// accessed by KBucket#appendToTail()
+public final class HammingKademlia extends Kademlia {
 
 	protected HammingKademlia(RoutingAlgorithmConfiguration config, RoutingService routingSvc)
 			throws InvalidAlgorithmParameterException {
 		super(config, routingSvc);
-
-		try {
-			this.config = (KademliaConfiguration)config;
-		}
-		catch (ClassCastException e) {
-			throw new InvalidAlgorithmParameterException("The given config is not KademliaConfiguration.");
-		}
-
-		// prepare k-buckets
-		this.numKBuckets = this.config.getIDSizeInByte() * 8;
-		this.kBucketLength = this.config.getKBucketLength();
-
-		kBuckets = new KBucket[numKBuckets];
 	}
 
-	public synchronized void reset() {
-		for (int i = 0; i < this.numKBuckets; i++) {
-			kBuckets[i] = null;
-		}
-	}
-
-	public void stop() { /* do nothing */ }
-
-	public synchronized void suspend() { /* do nothing */ }
-
-	public synchronized void resume() { /* do nothing */ }
-
+	@Override
 	public BigInteger distance(ID to, ID from) {
 		BigInteger toInt = to.toBigInteger();
 		BigInteger fromInt = from.toBigInteger();
 
 		// Hamming distance
 		return BigInteger.valueOf(fromInt.xor(toInt).bitCount());
-	}
-
-	private boolean isOurID(ID id) {
-		return this.selfIDAddress.getID().toBigInteger().compareTo(id.toBigInteger()) == 0;
 	}
 
 	public IDAddressPair[] nextHopCandidates(ID targetID, ID lastHop /*ignored*/, boolean joining,
@@ -152,10 +118,6 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 		return ret;
 	}
 
-	public IDAddressPair[] responsibleNodeCandidates(ID target, int maxNum) {
-		return this.nextHopCandidates(target, null, false, maxNum, null);
-	}
-
 	private int pickNodes(int index, IDAddressPair[] dest, KBucket kb, Comparator<IDAddressPair> comparator) {
 		IDAddressPair[] result;
 		if (true) {	// performs better
@@ -175,32 +137,6 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 		return index + copyLen;
 	}
 
-	public boolean toReplace(IDAddressPair existingEntry, IDAddressPair newEntry) {
-		if (existingEntry.equals(newEntry)) {
-			return false;
-		}
-
-		boolean pingSucceeded = false;
-		try {
-			pingSucceeded = runtime.ping(sender, existingEntry);
-		}
-		catch (IOException e) {
-			logger.log(Level.WARNING, "An IOException thrown during ping() from "
-					+ this.selfIDAddress.getAddress() + " to " + existingEntry.getAddress());
-		}
-
-		return !pingSucceeded;
-	}
-
-	public void join(IDAddressPair[] neighbors) {
-		// do nothing
-	}
-
-	public void join(IDAddressPair joiningNode, IDAddressPair lastHop, boolean isFinalNode) {
-		// do nothing
-		logger.log(Level.INFO, "On " + selfIDAddress.getAddress() + ", "
-				+ "Kademlia#join(" + joiningNode.getAddress() + ", " + (lastHop != null ? lastHop.getAddress() : "null") + ", " + isFinalNode + ") called.");
-	}
 
 	public void touch(IDAddressPair from) {
 		if (from.getID().compareTo(selfIDAddress.getID()) == 0) {
@@ -240,47 +176,5 @@ public final class HammingKademlia extends AbstractRoutingAlgorithm {
 				}
 			}
 		}
-	}
-
-	public String getRoutingTableString(int verboseLevel) {
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("[");
-		for (int i = 0; i < numKBuckets; i++) {
-			KBucket kb = kBuckets[i];
-			if (kb != null && kb.size() > 0) {
-				sb.append("\n ").append(i).append(":");
-				synchronized (kb) {
-					for (IDAddressPair pair: kb) {
-						sb.append("\n  ").append(pair.toString(verboseLevel));
-					}
-				}
-			}
-		}
-		sb.append("\n]");
-
-		return sb.toString();
-	}
-
-	public String getRoutingTableHTMLString() {
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("<table>\n");
-		for (int i = 0; i < numKBuckets; i++) {
-			KBucket kb = kBuckets[i];
-			if (kb != null && kb.size() > 0) {
-				sb.append("<tr><td>" + HTMLUtil.stringInHTML(Integer.toString(i)) + "</td><td></td><td></td></tr>\n");
-				synchronized (kb) {
-					for (IDAddressPair pair: kb) {
-						String url = HTMLUtil.convertMessagingAddressToURL(pair.getAddress());
-						sb.append("<tr><td></td><td><a href=\"" + url + "\">" + HTMLUtil.stringInHTML(url) + "</a></td><td>"
-								+ HTMLUtil.stringInHTML(pair.getID().toString()) + "</td></tr>\n");
-					}
-				}
-			}
-		}
-		sb.append("</table>\n");
-
-		return sb.toString();
 	}
 }

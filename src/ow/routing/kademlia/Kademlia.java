@@ -36,12 +36,12 @@ import ow.util.HTMLUtil;
 /**
  * A RoutingAlgorithm implementing Kademlia.
  */
-public final class Kademlia extends AbstractRoutingAlgorithm {
-	private final KademliaConfiguration config;
+public class Kademlia extends AbstractRoutingAlgorithm {
+	protected final KademliaConfiguration config;
 
 	// k-buckets
-	private final int numKBuckets;
-	private final KBucket[] kBuckets;
+	protected final int numKBuckets;
+	protected final KBucket[] kBuckets;
 	final int kBucketLength;	// accessed by KBucket#appendToTail()
 
 	protected Kademlia(RoutingAlgorithmConfiguration config, RoutingService routingSvc)
