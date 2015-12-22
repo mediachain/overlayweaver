@@ -1,6 +1,6 @@
 (ns hamming-dht.shell
   (:gen-class
-    :name hamming-dht.shell.HammingShell
+    :name hamming_dht.shell.HammingShell
     :state state
     :init init
     :implements [ow.tool.emulator.EmulatorControllable])
@@ -9,7 +9,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :as cli])
   (:import [java.io PrintStream Writer]
-           [hamming-dht.shell HammingShell]
+           [hamming_dht.shell HammingShell]
            [ow.tool.util.shellframework Shell ShellServer MessagePrinter]
            [ow.tool.dhtshell.commands StatusCommand InitCommand GetCommand GetSimilarCommand
                                       PutCommand RemoveCommand SetTTLCommand SetSecretCommand
