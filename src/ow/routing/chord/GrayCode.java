@@ -41,6 +41,6 @@ public class GrayCode {
   public static BigInteger distance(BigInteger g1, BigInteger g2) {
     final BigInteger b1 = fromGray(g1);
     final BigInteger b2 = fromGray(g2);
-    return b1.subtract(b2).abs();
+    return b1.subtract(b2);
   }
 }
