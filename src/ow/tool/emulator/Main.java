@@ -107,7 +107,7 @@ public class Main {
 
 	private OutputRedirector outputRedirector;
 
-	private Main() {
+	public Main() {
 		this.outputRedirector = new OutputRedirector(System.out);
 	}
 

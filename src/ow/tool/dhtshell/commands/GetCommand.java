@@ -110,7 +110,7 @@ public final class GetCommand implements Command<DHT<String>> {
 		}
 
 		if (showStatus) {
-			sb.append(CommandUtil.buildStatusMessage(context.getOpaqueData(), -1));
+			sb.append(CommandUtil.buildStatusMessage(context.getOpaqueData(), 1));
 		}
 
 		out.print(sb);
