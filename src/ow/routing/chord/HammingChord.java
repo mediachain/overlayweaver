@@ -23,12 +23,10 @@ import java.util.logging.Level;
  */
 
 public class HammingChord extends Chord {
-  private BigInteger MAX_ID_VAL;
 
   protected HammingChord(RoutingAlgorithmConfiguration config, RoutingService routingService)
       throws InvalidAlgorithmParameterException {
     super(config, routingService);
-    MAX_ID_VAL = BigInteger.ONE.shiftLeft(config.getIDSizeInByte() * 8);
   }
 
 
