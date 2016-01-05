@@ -251,11 +251,16 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 
 	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
+			throws RoutingException {
+		return getSimilar(key, threshold, config.getSimilarSearchExtraHopCount());
+	}
+
+	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops)
 		throws RoutingException {
 		ID[] keys = { key };
 		Float[] thresholds = { threshold };
 		SortedMap<ID, Set<ValueInfo<V>>>[] results = new SortedMap[keys.length];
-		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results);
+		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results, extraHops);
 
 		if (routingRes[0] == null) {
 			throw new RoutingException();
@@ -301,7 +306,8 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 	protected RoutingResult[] getSimilarRemotely(ID[] keys,
 																							 Float[] thresholds,
-																							 SortedMap<ID, Set<ValueInfo<V>>>[] results) {
+																							 SortedMap<ID, Set<ValueInfo<V>>>[] results,
+																							 int extraHops) {
 		if (!config.getSearchKeysForSimilarity()) {
 			// fallback to getRemotely()
 			Set<ValueInfo<V>>[] exactResults = new Set[keys.length];
@@ -347,12 +353,12 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		}
 
 		// To retrieve more similar results, query the neighbors of the nodes that returned
-		// values, up to the max number of hops specified in `config.getSimilarSearchExtraHopCount()`
+		// values, up to the max number of hops specified in `extraHops`
 
 		ID[] targets = new ID[keys.length];
 		RoutingResult[] lastHopResults = routingRes;
 
-		for (int hops = 0; hops < config.getSimilarSearchExtraHopCount(); hops++) {
+		for (int hops = 0; hops < extraHops; hops++) {
 			for (int i = 0; i < keys.length; i++) {
 				if (lastHopResults[i] == null) {
 					targets[i] = null;

@@ -88,6 +88,17 @@ public interface DHT<V extends Serializable> extends HighLevelService {
 			throws RoutingException;
 
 	/**
+	 * Returns values for keys within `similarity` threshold of `key`, searching `extraHops`
+	 * nodes beyond the node responsible for the search key.
+	 * @param key
+	 * @param similarity - threshold within which similar keys will be returned (range: 0-1)
+	 * @return A map of key -> set of values, sorted by similarity
+	 */
+	SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
+			throws RoutingException;
+
+
+	/**
 	 * Performs multiple get operations collectively.
 	 */
 	Set<ValueInfo<V>>[] get(ID[] keys);

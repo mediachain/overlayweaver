@@ -179,6 +179,12 @@ public final class CHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	@Override
+	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
+			throws RoutingException {
+		return getSimilar(key, similarity);
+	}
+
+	@Override
 	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity) throws RoutingException {
 		// TODO: implement if/when time allows. for now, fall back to get()
 		Set<ValueInfo<V>> val = this.get(key);

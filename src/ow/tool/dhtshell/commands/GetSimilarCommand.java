@@ -38,7 +38,7 @@ public final class GetSimilarCommand implements Command<DHT<String>> {
 	public String[] getNames() { return NAMES; }
 
 	public String getHelp() {
-		return "get-similar [-status] <key> <threshold> [<key> <threshold> ...]";
+		return "get-similar [-status] [-hops <num-hops>] <key> <threshold> [<key> <threshold> ...]";
 	}
 
 	public boolean execute(ShellContext<DHT<String>> context) {
@@ -46,10 +46,16 @@ public final class GetSimilarCommand implements Command<DHT<String>> {
 		PrintStream out = context.getOutputStream();
 		String[] args = context.getArguments();
 		boolean showStatus = false;
+		int extraHops = -1;
 		int argIndex = 0;
 
 		if (argIndex < args.length && args[argIndex].equals("-status")) {
 			showStatus = true;
+			argIndex++;
+		}
+
+		if (argIndex < args.length - 1 && args[argIndex].equals("-hops")) {
+			extraHops = Integer.parseInt(args[++argIndex]);
 			argIndex++;
 		}
 
@@ -94,14 +100,16 @@ public final class GetSimilarCommand implements Command<DHT<String>> {
 			thresholds[i] = pair.getValue();
 
 			try {
-				results[i] = dht.getSimilar(keys[i], thresholds[i]);
+				if (extraHops >= 0) {
+					results[i] = dht.getSimilar(keys[i], thresholds[i], extraHops);
+				} else {
+					results[i] = dht.getSimilar(keys[i], thresholds[i]);
+				}
 			} catch (RoutingException e) {
 				results[i] = null;
 			}
 
 		}
-
-		HammingIDComparator similarityComparator = new HammingIDComparator();
 
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < keys.length; i++) {
