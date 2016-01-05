@@ -338,10 +338,62 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 			if (routingRes[i] == null) continue;
 
 			if (callbackResultContainer[i] != null)
-				results[i] = (TreeMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+				results[i] = (SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+		}
 
-			if (results[i] == null) results[i] = new TreeMap<>();
-			// routing succeeded and results[i] should not be null.
+		// If there are no spare candidates, we can't query the neighbors of the responsible nodes
+		if (config.getNumSpareResponsibleNodeCandidates() < 1) {
+			return routingRes;
+		}
+
+		// To retrieve more similar results, query the neighbors of the nodes that returned
+		// values, up to the max number of hops specified in `config.getSimilarSearchExtraHopCount()`
+
+		ID[] targets = new ID[keys.length];
+		RoutingResult[] lastHopResults = routingRes;
+
+		for (int hops = 0; hops < config.getSimilarSearchExtraHopCount(); hops++) {
+			for (int i = 0; i < keys.length; i++) {
+				if (lastHopResults[i] == null) {
+					targets[i] = null;
+					continue;
+				}
+
+				IDAddressPair[] candidates = lastHopResults[i].getResponsibleNodeCandidates();
+				// the first candidate is the node that returned the result, followed by its neighbors,
+				// sorted by proximity to the target key.
+				if (candidates.length > 1 && candidates[1] != null) {
+					targets[i] = candidates[1].getID();
+				}
+			}
+
+			// targets now contains the IDs of the nodes nearest to the responsible nodes from last round
+			// so we query those nodes using the same args
+			lastHopResults = this.routingSvc.invokeCallbacksOnRoute(
+					targets, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
+					callbackResultContainer, -1, args);
+
+			// merge results from this round with those from previous hops
+			for (int i = 0; i < keys.length; i++) {
+				if (lastHopResults[i] == null || callbackResultContainer[i] == null) {
+					continue;
+				}
+
+				SortedMap<ID, Set<ValueInfo<V>>> accumulatedResults = results[i];
+				SortedMap<ID, Set<ValueInfo<V>>> hopResult =
+						(SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+
+				// For each entry in the new map, merge into the accumulatedResults.
+				// If the same ID key exists in both, merge both sets of values
+				for (Map.Entry<ID, Set<ValueInfo<V>>> entry : hopResult.entrySet()) {
+					accumulatedResults.merge(entry.getKey(), entry.getValue(),
+							(Set<ValueInfo<V>> prevVals, Set<ValueInfo<V>> newVals) -> {
+								prevVals.addAll(newVals);
+								return prevVals;
+							});
+				}
+				results[i] = accumulatedResults;
+			}
 		}
 
 		return routingRes;
