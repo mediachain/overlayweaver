@@ -297,7 +297,7 @@ public final class XmlRpcDHTServer implements Interruptible {
 								threshold = Float.parseFloat(thresholdStr);
 							} catch (NumberFormatException e) { }
 
-							SortedMap<ID, Set<ValueInfo<String>>> results = dht.getSimilar(keyID, threshold);
+							Map<ID, Set<ValueInfo<String>>> results = dht.getSimilar(keyID, threshold);
 
 							if (results != null && !results.isEmpty()) {
 								getResult = new HashSet<>();

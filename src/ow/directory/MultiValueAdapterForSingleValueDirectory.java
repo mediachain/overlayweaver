@@ -50,12 +50,12 @@ public final class MultiValueAdapterForSingleValueDirectory<K,V> implements Mult
 	}
 
 	@Override
-	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
 		return this.dir.getSimilarKeys(key, threshold);
 	}
 
-	public SortedMap<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
-		final SortedMap<K, V> vals = this.dir.getSimilar(key, threshold);
+	public Map<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
+		final Map<K, V> vals = this.dir.getSimilar(key, threshold);
 		TreeMap<K, Set<V>> ret = new TreeMap<>();
 		for (K k : vals.keySet()) {
 			Set<V> valSet = new HashSet<>();

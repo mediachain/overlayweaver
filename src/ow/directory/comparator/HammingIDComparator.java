@@ -18,9 +18,9 @@ public class HammingIDComparator implements KeySimilarityComparator<ID>, Seriali
 
     @Override
     public int compare(ID k1, ID k2) {
-      int sim1 = (int) (HammingIDComparator.getSimilarity(reference, k1) * 10000.0);
-      int sim2 = (int) (HammingIDComparator.getSimilarity(reference, k2) * 10000.0);
-      return sim1 - sim2;
+      float sim1 = HammingIDComparator.getSimilarity(reference, k1);
+      float sim2 = HammingIDComparator.getSimilarity(reference, k2);
+      return Float.compare(sim1, sim2);
     }
   }
 

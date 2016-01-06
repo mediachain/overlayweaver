@@ -56,20 +56,14 @@ public final class MultipleValueHashDirectory<K,V> implements MultiValueDirector
 	}
 
 	@Override
-	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
 		return this.internalDir.getSimilarKeys(key, threshold);
 	}
 
-	public SortedMap<K,Set<V>> getSimilar(K key, float threshold) throws Exception {
+	public Map<K,Set<V>> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
 
-		TreeMap<K,Set<V>> results;
-		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
-		if (similarityComparator == null) {
-			results = new TreeMap<>();
-		} else {
-			results = new TreeMap<>(similarityComparator.comparatorForKey(key));
-		}
+		HashMap<K,Set<V>> results = new HashMap<>();
 
 		for (K k : keys) {
 			results.put(k, this.get(k));

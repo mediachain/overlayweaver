@@ -31,8 +31,8 @@ public interface SingleValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	V get(K key) throws Exception;
 
 	KeySimilarityComparator<K> getSimilarityComparator();
-	SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception;
-	SortedMap<K,V> getSimilar(K key, float threshold) throws Exception;
+	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
+	Map<K,V> getSimilar(K key, float threshold) throws Exception;
 	V put(K key, V value) throws Exception;
 	V remove(K key) throws Exception;
 	boolean isEmpty();

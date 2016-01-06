@@ -18,6 +18,7 @@
 package ow.dht;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
@@ -84,7 +85,7 @@ public interface DHT<V extends Serializable> extends HighLevelService {
 	 * @param similarity - threshold within which similar keys will be returned (range: 0-1)
 	 * @return A map of key -> set of values, sorted by similarity
 	 */
-	SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity)
+	Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity)
 			throws RoutingException;
 
 	/**
@@ -94,7 +95,7 @@ public interface DHT<V extends Serializable> extends HighLevelService {
 	 * @param similarity - threshold within which similar keys will be returned (range: 0-1)
 	 * @return A map of key -> set of values, sorted by similarity
 	 */
-	SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
+	Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
 			throws RoutingException;
 
 

@@ -32,8 +32,10 @@ import ow.directory.DirectoryConfiguration;
 import ow.directory.DirectoryConfiguration.HeapOverflowAction;
 import ow.directory.OutOfHeapException;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.HammingIDComparator;
 import ow.directory.comparator.KeySimilarityComparator;
 import ow.directory.comparator.KeySimilarityComparatorFactory;
+import ow.id.ID;
 
 public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory<K,V> {
 	private final static Logger logger = Logger.getLogger("directory");
@@ -129,20 +131,20 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 		return similarityComparator;
 	}
 
-	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
 		if (similarityComparator == null) {
 			logger.warning("Similarity comparison not supported");
 			if (this.keySet().contains(key)) {
-				return new TreeSet<K>() {{
+				return new HashSet<K>() {{
 					add(key);
 				}};
 			}
-			return new TreeSet<>();
+			return new HashSet<>();
 		}
 
 		// TODO: use more efficient impl than brute-force search of entire keyset :)
 		Set<K> keys = keySet();
-		TreeSet<K> results = new TreeSet<>(similarityComparator.comparatorForKey(key));
+		Set<K> results = new HashSet<>();
 
 		for (K candidate : keys) {
 			float sim = similarityComparator.similarity(key, candidate);
@@ -153,9 +155,9 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 		return results;
 	}
 
-	public SortedMap<K,V> getSimilar(K key, float threshold) throws Exception {
+	public Map<K,V> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
-		TreeMap<K,V> results = new TreeMap<>(similarityComparator.comparatorForKey(key));
+		HashMap<K,V> results = new HashMap<>();
 
 		for (K k : keys) {
 			results.put(k, this.get(k));

@@ -47,13 +47,13 @@ public interface MultiValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	 * using the KeySimilarityComparator specified in the config.
 	 * @return empty set if no similar keys are found
    */
-	SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception;
+	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
 
 	/**
 	 * Returns a set of key/value pairs for keys that are similar to `key`, within `threshold`
 	 * @return null if no values are found
    */
-	SortedMap<K,Set<V>> getSimilar(K key, float threshold) throws Exception;
+	Map<K,Set<V>> getSimilar(K key, float threshold) throws Exception;
 
 	/**
 	 * Puts a pair of the specified key and value.

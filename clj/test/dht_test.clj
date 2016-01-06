@@ -14,7 +14,8 @@
 (def dht-opts
   {:algorithm   "Kademlia"
    :id-byte-len 20
-   :upnp?       false})
+   :upnp?       false
+   :transport "Emulator"})
 
 (def ^{:private true}
   test-dht (dht/dht dht-opts))

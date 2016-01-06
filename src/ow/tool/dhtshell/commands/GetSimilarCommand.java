@@ -92,7 +92,7 @@ public final class GetSimilarCommand implements Command<DHT<String>> {
 		// process get requests
 		ID[] keys = new ID[requestQueue.size()];
 		Float[] thresholds = new Float[requestQueue.size()];
-		SortedMap<ID, Set<ValueInfo<String>>>[] results = new SortedMap[requestQueue.size()];
+		Map<ID, Set<ValueInfo<String>>>[] results = new Map[requestQueue.size()];
 
 		for (int i = 0; i < keys.length; i++) {
 			Map.Entry<ID, Float> pair = requestQueue.poll();

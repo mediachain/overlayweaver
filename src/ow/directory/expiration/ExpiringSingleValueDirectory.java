@@ -114,20 +114,13 @@ public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory
 		return internalDirectory.getSimilarityComparator();
 	}
 
-	public SortedSet<K> getSimilarKeys(K key, float threshold) throws Exception {
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
 		return internalDirectory.getSimilarKeys(key, threshold);
 	}
 
-	public SortedMap<K, V> getSimilar(K key, float threshold) throws Exception {
+	public Map<K, V> getSimilar(K key, float threshold) throws Exception {
 		Set<K> keys = getSimilarKeys(key, threshold);
-		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
-		TreeMap<K,V> results;
-		if (similarityComparator == null) {
-			results = new TreeMap<>();
-		} else {
-			results = new TreeMap<>(similarityComparator.comparatorForKey(key));
-		}
-
+		HashMap<K,V> results = new HashMap<>();
 		for (K k : keys) {
 			results.put(k, this.get(k));
 		}

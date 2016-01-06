@@ -8,7 +8,9 @@
     [clojure.test.check :as tc]
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop])
-  (:import (ow.id ID)))
+  (:import (ow.id ID)
+           (ow.directory.comparator HammingIDComparator)
+           (ow.directory DirectoryConfiguration DirectoryFactory)))
 
 (defn kv-gen
   [id-byte-length]
@@ -18,12 +20,14 @@
   [n id-byte-len]
   (gen/fmap (partial into {}) (gen/vector (kv-gen id-byte-len) n)))
 
+(defn similar? [id-1 id-2 threshold]
+  (let [similarity (float (HammingIDComparator/getSimilarity id-1 id-2))]
+    (>= similarity (float threshold))))
+
 (defn within-threshold
   "Returns the set of IDs from `ids` within similarity `threshold` of `key`"
   [ids key threshold]
-  (let [dist (sim->hamming threshold (* 8 (.getSize key)))
-        in-threshold #(< (id-distance % key) dist)]
-    (into #{} (filter in-threshold ids))))
+  (into #{} (filter #(similar? key % threshold) ids)))
 
 (defn get-all-similar
   "Try to get all keys similar to `key` from `overlay`, within `threshold`.
@@ -70,25 +74,27 @@
             (recur (conj hop-results new-keys))))))))
 
 (def sample-vals (first (gen/sample (kv-map-gen 100 20) 1)))
+(def dir (.openMultiValueDirectory
+           (DirectoryFactory/getProvider "VolatileMap")
+           ID String "/tmp" "testing-db" (DirectoryConfiguration/getDefaultConfiguration)))
+
+(defn put-dir [dir m]
+  (doseq [[k v] m]
+    (.put dir k v)))
 
 (comment
   (let [m sample-vals
         all-keys (keys m)
-        overlay (emu/make-overlay 10 {:algorithm "Chord"})
+        overlay (emu/make-overlay 10 {:algorithm "HammingChord"})
         node (first (:nodes overlay))]
     (emu/start! overlay)
     (Thread/sleep 1000)
     (emu/put! overlay m)
     (Thread/sleep 1000)
-    (let [get-results (map #(.get node %) all-keys)
-          query (first all-keys)
+    (let [query (first all-keys)
           threshold 0.5
-          hops 30
-          sim-results {:found (.getSimilar node query threshold hops)
-                       :expected (within-threshold all-keys query threshold)}
-          #_(get-all-similar overlay (rand-nth all-keys) 0.5 all-keys)
-
-          results {:get get-results :get-all-similar sim-results}]
+          results
+          (get-all-similar overlay query threshold all-keys)]
       #_(Thread/sleep 10000)
       #_(emu/stop! overlay)
       (def last-run results)

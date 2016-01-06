@@ -41,6 +41,7 @@ import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
 import ow.id.ID;
 import ow.id.IDAddressPair;
+import ow.id.comparator.AlgoBasedTowardTargetIDComparator;
 import ow.messaging.Message;
 import ow.messaging.MessageHandler;
 import ow.messaging.MessageSender;
@@ -49,15 +50,7 @@ import ow.messaging.MessagingConfiguration;
 import ow.messaging.MessagingFactory;
 import ow.messaging.MessagingProvider;
 import ow.messaging.Signature;
-import ow.routing.CallbackOnRoute;
-import ow.routing.RoutingAlgorithmConfiguration;
-import ow.routing.RoutingAlgorithmFactory;
-import ow.routing.RoutingAlgorithmProvider;
-import ow.routing.RoutingException;
-import ow.routing.RoutingResult;
-import ow.routing.RoutingService;
-import ow.routing.RoutingServiceFactory;
-import ow.routing.RoutingServiceProvider;
+import ow.routing.*;
 
 /**
  * A basic implementation of DHT service over a routing service.
@@ -250,16 +243,16 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 
-	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
 			throws RoutingException {
 		return getSimilar(key, threshold, config.getSimilarSearchExtraHopCount());
 	}
 
-	public SortedMap<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops)
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops)
 		throws RoutingException {
 		ID[] keys = { key };
 		Float[] thresholds = { threshold };
-		SortedMap<ID, Set<ValueInfo<V>>>[] results = new SortedMap[keys.length];
+		Map<ID, Set<ValueInfo<V>>>[] results = new Map[keys.length];
 		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results, extraHops);
 
 		if (routingRes[0] == null) {
@@ -306,7 +299,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 	protected RoutingResult[] getSimilarRemotely(ID[] keys,
 																							 Float[] thresholds,
-																							 SortedMap<ID, Set<ValueInfo<V>>>[] results,
+																							 Map<ID, Set<ValueInfo<V>>>[] results,
 																							 int extraHops) {
 		if (!config.getSearchKeysForSimilarity()) {
 			// fallback to getRemotely()
@@ -344,7 +337,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 			if (routingRes[i] == null) continue;
 
 			if (callbackResultContainer[i] != null)
-				results[i] = (SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+				results[i] = (Map<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
 		}
 
 		// If there are no spare candidates, we can't query the neighbors of the responsible nodes
@@ -358,23 +351,44 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		ID[] targets = new ID[keys.length];
 		RoutingResult[] lastHopResults = routingRes;
 
+		RoutingAlgorithm algo = this.getRoutingService().getRoutingAlgorithm();
+
+		TreeSet<ID>[] closestNodes = new TreeSet[keys.length];
+		Set<ID>[] alreadyContacted = new Set[keys.length];
+		for (int i = 0; i < keys.length; i++) {
+			AlgoBasedTowardTargetIDComparator comparator =
+					new AlgoBasedTowardTargetIDComparator(algo, keys[i]);
+			closestNodes[i] = new TreeSet<>(comparator);
+			alreadyContacted[i] = new HashSet<>();
+		}
+
 		for (int hops = 0; hops < extraHops; hops++) {
 			for (int i = 0; i < keys.length; i++) {
 				if (lastHopResults[i] == null) {
-					targets[i] = null;
+					targets[i] = keys[i];
 					continue;
 				}
 
 				IDAddressPair[] candidates = lastHopResults[i].getResponsibleNodeCandidates();
 				// the first candidate is the node that returned the result, followed by its neighbors,
 				// sorted by proximity to the target key.
-				if (candidates.length > 1 && candidates[1] != null) {
-					targets[i] = candidates[1].getID();
+				alreadyContacted[i].add(candidates[0].getID());
+				for (IDAddressPair node : candidates) {
+					closestNodes[i].add(node.getID());
 				}
+
+				closestNodes[i].removeAll(alreadyContacted[i]);
+				if (closestNodes[i].isEmpty()) {
+					targets[i] = keys[i];
+					continue;
+				}
+
+				targets[i] = closestNodes[i].first();
 			}
 
 			// targets now contains the IDs of the nodes nearest to the responsible nodes from last round
 			// so we query those nodes using the same args
+			logger.warning("Hop #" + hops + " contacting " + targets);
 			lastHopResults = this.routingSvc.invokeCallbacksOnRoute(
 					targets, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
 					callbackResultContainer, -1, args);
@@ -385,9 +399,9 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 					continue;
 				}
 
-				SortedMap<ID, Set<ValueInfo<V>>> accumulatedResults = results[i];
-				SortedMap<ID, Set<ValueInfo<V>>> hopResult =
-						(SortedMap<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+				Map<ID, Set<ValueInfo<V>>> accumulatedResults = results[i];
+				Map<ID, Set<ValueInfo<V>>> hopResult =
+						(Map<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
 
 				// For each entry in the new map, merge into the accumulatedResults.
 				// If the same ID key exists in both, merge both sets of values
@@ -950,11 +964,11 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		return returnedValues;
 	}
 
-	protected SortedMap<ID, Set<ValueInfo<V>>>
+	protected Map<ID, Set<ValueInfo<V>>>
 		getSimilarValuesLocally(ID key, float threshold, MultiValueDirectory<ID, ValueInfo<V>> dir) {
 
 		try {
-			SortedMap<ID, Set<ValueInfo<V>>> result = dir.getSimilar(key, threshold);
+			Map<ID, Set<ValueInfo<V>>> result = dir.getSimilar(key, threshold);
 			return result;
 		} catch (Exception e) {
 			logger.log(Level.WARNING, "An Exception thrown by Directory#getSimilar().", e);
