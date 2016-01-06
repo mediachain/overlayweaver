@@ -8,7 +8,7 @@
     (java.util.logging LogManager)))
 
 
-(defn- quiet-logger
+(defn quiet-logger
   "Prevent OW logger from dumping tons of output to the REPL console."
   []
   (let [config "java.util.logging.ConsoleHandler.level = WARNING"

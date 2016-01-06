@@ -39,7 +39,7 @@
   "A generator which returns an overlayweaver ID of the length set in the `dht-opts` var."
   (id-gen* (:id-byte-len dht-opts)))
 
-(defn- sim->hamming
+(defn sim->hamming
   "Given a similarity float `sim` in the range 0.0 - 1.0 and the size of the ID space `bit-length`,
   return the Hamming distance that represents that value of similarity."
   [sim bit-length]
