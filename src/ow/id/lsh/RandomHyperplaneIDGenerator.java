@@ -39,8 +39,8 @@ public class RandomHyperplaneIDGenerator {
 
     // Generate `m` random vectors of `n` dimensions,
     // Where `m` == `idBitLength` and `n` == contentVectorDimensions
-    // Each dimension has a range `r` of `contentVectorBitLength`
-    // Random values are obtained by scaling `Random.nextGaussian` by 2 ^ `r`
+    // Each dimension has a range `r` of 2^`contentVectorBitLength`
+    // Random values are obtained by scaling `Random.nextGaussian` by `r`
 
     for (int i = 0; i < idBitLength; i++) {
       for (int j = 0; j < contentVectorDimensions; j++) {
@@ -72,7 +72,7 @@ public class RandomHyperplaneIDGenerator {
     BigInteger result = BigInteger.ZERO;
     for (int i = 0; i < idBitLength; i++) {
       BigInteger dot = dotProduct(inputVector, randomProjections[i]);
-      if (dot.compareTo(BigInteger.ZERO) > 0) {
+      if (dot.compareTo(BigInteger.ZERO) >= 0) {
         result = result.flipBit(i);
       }
     }
