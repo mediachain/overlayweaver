@@ -10,14 +10,13 @@
 
 (def defaults
   {:routing-style "Iterative"
-   :algorithm     "HammingKademlia"
+   :algorithm     "HammingChord"
    :transport     "UDP"
    :working-dir   (get-working-dir)
    :app-id        1
    :app-version   1
    :id-byte-len   20
    :self-address-map {:host "localhost" :port 3997}
-   :stat-collector-address-map {:host "localhost"}
    :self-id       nil})
 
 
@@ -36,7 +35,7 @@
   Returns a RoutingAlgorithmConfiguration object for the given routing
   algorithm.
 
-  `algorithm` can be the name of an algorithm (e.g. 'HammingKademlia')
+  `algorithm` can be the name of an algorithm (e.g. 'HammingChord')
   or an instance of RoutingAlgorithmProvider.
 
   `opts` is an optional map of config options:
@@ -188,5 +187,9 @@
          routing-svc (routing-service dht-cfg algo-provider algo-config opts)]
      (.setSelfPort dht-cfg (-> routing-svc .getMessageReceiver .getPort))
      (.initializeAlgorithmInstance algo-provider algo-config routing-svc)
-     (DHTFactory/getDHT dht-cfg routing-svc))))
+
+     (let [dht-instance (DHTFactory/getDHT dht-cfg routing-svc)]
+       (if-let [stat-collector (:stat-collector-address-map opts)]
+         (.setStatCollectorAddress dht-instance (:host stat-collector) (:port stat-collector -1)))
+       dht-instance))))
 
