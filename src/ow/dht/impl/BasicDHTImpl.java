@@ -356,9 +356,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		TreeSet<ID>[] closestNodes = new TreeSet[keys.length];
 		Set<ID>[] alreadyContacted = new Set[keys.length];
 		for (int i = 0; i < keys.length; i++) {
-			AlgoBasedTowardTargetIDComparator comparator =
-					new AlgoBasedTowardTargetIDComparator(algo, keys[i]);
-			closestNodes[i] = new TreeSet<>(comparator);
+			closestNodes[i] = new TreeSet<>();
 			alreadyContacted[i] = new HashSet<>();
 		}
 
