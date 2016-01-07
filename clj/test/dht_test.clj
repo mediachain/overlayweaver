@@ -88,6 +88,18 @@
   (gen/bind (gen/shuffle (map #(* 0.001 %) (range 1000)))
             gen/elements))
 
+(defn similarity-in-range-gen
+  [lower-bound upper-bound]
+  (let [r (range (int (* 1000 lower-bound)) (int (* 1000 upper-bound)))]
+    (gen/bind (gen/shuffle (map #(* 0.001 %) r))
+              gen/elements)))
+
+(defn id-with-similarity-in-range-gen
+  [id lower-bound upper-bound]
+  (assert (valid-similarity? lower-bound) "lower-bound must be between 0.0 - 1.0")
+  (assert (valid-similarity? upper-bound) "upper-bound must be between 0.0 - 1.0")
+  (gen/let [sim (similarity-in-range-gen lower-bound upper-bound)]
+           (id-with-similarity-gen id sim)))
 
 (defn greater-similarity-gen [sim]
   (gen/such-that #(and (valid-similarity? %) (> % sim)) similarity-gen 1000))
