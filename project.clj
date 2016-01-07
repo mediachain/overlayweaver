@@ -9,6 +9,10 @@
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.cli "0.3.3"]
                  [org.clojure/core.async "0.2.374"]]
+  :jvm-opts ["-Dcom.sun.management.jmxremote"
+             "-Dcom.sun.management.jmxremote.ssl=false"
+             "-Dcom.sun.management.jmxremote.authenticate=false"
+             "-Dcom.sun.management.jmxremote.port=43210"]
   :aot [hamming-dht.shell]
   :main hamming-dht.shell
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.9.0"]
