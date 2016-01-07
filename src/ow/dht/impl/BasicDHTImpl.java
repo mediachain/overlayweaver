@@ -370,14 +370,16 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				}
 
 				IDAddressPair[] candidates = lastHopResults[i].getResponsibleNodeCandidates();
+				RoutingHop[] route = lastHopResults[i].getRoute();
 				// the first candidate is the node that returned the result, followed by its neighbors,
 				// sorted by proximity to the target key.
-				alreadyContacted[i].add(candidates[0].getID());
+				alreadyContacted[i].add(route[route.length - 1].getIDAddressPair().getID());
 				for (IDAddressPair node : candidates) {
 					closestNodes[i].add(node.getID());
 				}
 
 				closestNodes[i].removeAll(alreadyContacted[i]);
+				closestNodes[i].remove(getSelfIDAddressPair().getID());
 				if (closestNodes[i].isEmpty()) {
 					targets[i] = keys[i];
 					continue;
