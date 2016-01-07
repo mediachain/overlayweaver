@@ -37,6 +37,7 @@
    0 - 1. The lower-bound is inclusive, and upper-bound is exclusive, so e.g, [0.5 0.6] would
    produce values between 0.5 and 0.5999.
 
+
    The weight values represent the weight of that range of similarities
    in the distribution of similar keys generated.  All weights will be added together, and the
    weight of each similarity value will be (w / total).
@@ -120,7 +121,16 @@
             #_(println "new-keys: " new-keys)
             (recur (conj hop-results new-keys))))))))
 
-(def sample-vals (first (gen/sample (kv-map-gen 100 20) 1)))
+(def sample-distribution
+  {[0.5 0.6] 1
+   [0.6 0.7] 2
+   [0.7 0.8] 1.5
+   [0.8 0.9] 1
+   [0.9 0.95] 0.25
+   [0 0.95] 2})
+
+
+(def sample-vals (gen/generate (kv-map-with-frequencies-gen 100 20 sample-distribution)))
 (def dir (.openMultiValueDirectory
            (DirectoryFactory/getProvider "VolatileMap")
            ID String "/tmp" "testing-db" (DirectoryConfiguration/getDefaultConfiguration)))
@@ -132,7 +142,7 @@
 (comment
   (let [m sample-vals
         all-keys (keys m)
-        overlay (emu/make-overlay 10 {:algorithm "HammingChord"})
+        overlay (emu/make-overlay 100 {:algorithm "HammingChord"})
         node (first (:nodes overlay))]
     (emu/start! overlay)
     (Thread/sleep 5000)
