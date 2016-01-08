@@ -360,10 +360,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 			alreadyContacted[i] = new HashSet<>();
 		}
 
-		for (int hops = 0; hops < extraHops; hops++) {
+		for (int hop = 1; hop <= extraHops; hop++) {
 			for (int i = 0; i < keys.length; i++) {
 				if (lastHopResults[i] == null) {
-					targets[i] = keys[i];
+					//targets[i] = keys[i];
 					continue;
 				}
 
@@ -377,9 +377,9 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				}
 
 				closestNodes[i].removeAll(alreadyContacted[i]);
-				closestNodes[i].remove(getSelfIDAddressPair().getID());
+				//closestNodes[i].remove(getSelfIDAddressPair().getID());
 				if (closestNodes[i].isEmpty()) {
-					targets[i] = keys[i];
+					//targets[i] = keys[i];
 					continue;
 				}
 
@@ -388,7 +388,8 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 			// targets now contains the IDs of the nodes nearest to the responsible nodes from last round
 			// so we query those nodes using the same args
-			logger.warning("Hop #" + hops + " contacting " + targets);
+			// logger.warning("Extra Hop #" + hop + " contacting " + targets);
+			callbackResultContainer = new Serializable[keys.length][1];
 			lastHopResults = this.routingSvc.invokeCallbacksOnRoute(
 					targets, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
 					callbackResultContainer, -1, args);
@@ -399,6 +400,7 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 					continue;
 				}
 
+
 				Map<ID, Set<ValueInfo<V>>> accumulatedResults = results[i];
 				Map<ID, Set<ValueInfo<V>>> hopResult =
 						(Map<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
@@ -406,12 +408,22 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				// For each entry in the new map, merge into the accumulatedResults.
 				// If the same ID key exists in both, merge both sets of values
 				for (Map.Entry<ID, Set<ValueInfo<V>>> entry : hopResult.entrySet()) {
+
+					HashSet<ValueInfo<V>> hopVals = new HashSet<>();
 					// Increase the 'extraHopCount' for the ValueInfo objects returned
 					for (ValueInfo<V> v : entry.getValue()) {
-						v.setExtraHopCount(hops);
+						if (accumulatedResults.containsKey(entry.getKey())) {
+							hopVals.add(v);
+						} else {
+							ValueInfo<V> withNewHopCount = new ValueInfo<>(
+									v.getValue(),
+									new ValueInfo.Attributes(v.getAttributes(), hop));
+							hopVals.add(withNewHopCount);
+						}
 					}
 
-					accumulatedResults.merge(entry.getKey(), entry.getValue(),
+					final int thisHop = hop;
+					accumulatedResults.merge(entry.getKey(), hopVals,
 							(Set<ValueInfo<V>> prevVals, Set<ValueInfo<V>> newVals) -> {
 								prevVals.addAll(newVals);
 								return prevVals;
