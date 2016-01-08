@@ -406,6 +406,11 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 				// For each entry in the new map, merge into the accumulatedResults.
 				// If the same ID key exists in both, merge both sets of values
 				for (Map.Entry<ID, Set<ValueInfo<V>>> entry : hopResult.entrySet()) {
+					// Increase the 'extraHopCount' for the ValueInfo objects returned
+					for (ValueInfo<V> v : entry.getValue()) {
+						v.setExtraHopCount(hops);
+					}
+
 					accumulatedResults.merge(entry.getKey(), entry.getValue(),
 							(Set<ValueInfo<V>> prevVals, Set<ValueInfo<V>> newVals) -> {
 								prevVals.addAll(newVals);
