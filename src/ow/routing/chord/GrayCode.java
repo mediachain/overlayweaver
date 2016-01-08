@@ -37,8 +37,11 @@ public class GrayCode {
   }
 
   public static BigInteger fromGray(BigInteger n) {
-    if (fromGrayMemo.containsKey(n)) {
-      return fromGrayMemo.get(n);
+
+    synchronized (fromGrayMemo) {
+      if (fromGrayMemo.containsKey(n)) {
+        return fromGrayMemo.get(n);
+      }
     }
 
     BigInteger orig = n;
