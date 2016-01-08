@@ -5,6 +5,7 @@
                       id-with-similarity-in-range-gen
                       id-with-similarity-gen]]
     [clojure.set :as set]
+    [clojure.java.io :as io]
     [clojure.test :as test :refer [use-fixtures run-tests]]
     [clojure.test.check.clojure-test :refer [defspec]]
     [clojure.test.check :as tc]
@@ -63,10 +64,24 @@
     (gen/let [ref-id (id-gen* id-byte-len)]
              (gen/vector-distinct (gen/frequency (freq-gen-pairs ref-id)) {:num-elements n}))))
 
+
+
 (defn kv-map-with-frequencies-gen
   [n id-byte-len distribution]
   (gen/fmap #(into {} (map (fn [k] [k (str "value for " k)]) %))
             (ids-with-frequencies-gen n id-byte-len distribution)))
+
+(defn ids-with-frequencies-sample
+  [n-keys id-byte-len distribution]
+  (let [batch-size (min 100 n-keys)
+        num-batches (int (/ n-keys batch-size))
+        batches (gen/sample (ids-with-frequencies-gen batch-size id-byte-len distribution) num-batches)]
+    (into #{} (apply concat batches))))
+
+(defn kv-map-with-frequencies-sample
+  [n id-byte-len distribution]
+  (into {} (map (fn [k] [k (str "value for " k)])
+                (ids-with-frequencies-sample n id-byte-len distribution))))
 
 (defn similar? [id-1 id-2 threshold]
   (let [similarity (float (HammingIDComparator/getSimilarity id-1 id-2))]
@@ -134,32 +149,47 @@
    [0 0.95]   2})
 
 
-(def sample-vals (gen/generate (kv-map-with-frequencies-gen 100 20 sample-distribution)))
-
 (def id-size-bytes 20)
+(emu/quiet-logger)
+
+(defn get-all-similar-for-all-keys
+  [overlay m search-threshold]
+  (let [all-keys (keys m)]
+    (emu/start! overlay)
+    (emu/put! overlay m)
+    (let [get-similar-results
+          (map #(get-all-similar overlay % search-threshold all-keys) all-keys)
+          desired-keys [:total-expected :total-found :num-hops :found-per-hop :found-all?
+                        :per-hop-percentage]
+          results
+          (->> get-similar-results
+               (map (fn [result-map]
+                      (into {:query-key (keyword (str (:query-key result-map)))}
+                            (select-keys result-map desired-keys))))
+               (into []))] ; force realization of lazy seq before stopping the overlay)
+      (emu/stop! overlay)
+      results)))
 
 (defn measure-distribution-across-nodes
   [algorithms n-nodes n-keys distribution search-threshold]
-  (let [m (gen/generate (kv-map-with-frequencies-gen n-keys id-size-bytes distribution))
-        all-keys (keys m)]
-    (->>
-      (for [algorithm algorithms]
-        (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
-          (emu/start! overlay)
-          (emu/put! overlay m)
-          (let [get-similar-results
-                (map #(get-all-similar overlay % search-threshold all-keys) all-keys)
-                desired-keys [:total-expected :total-found :num-hops :found-per-hop :found-all?
-                              :per-hop-percentage]
-                restructured
-                (->> get-similar-results
-                     (map (fn [result-map]
-                            (into {:query-key (keyword (str (:query-key result-map)))}
-                                  (select-keys result-map desired-keys))))
-                     (into []))] ; force realization of lazy seq before stopping the overlay
-            (emu/stop! overlay)
-            [(keyword algorithm) restructured])))
-      (into {}))))
+  (let [m (kv-map-with-frequencies-sample n-keys id-size-bytes distribution)]
+    (into {}
+          (for [algorithm algorithms]
+            (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
+              [(keyword algorithm) (get-all-similar-for-all-keys overlay m search-threshold)])))))
+
+(defn append-val [val & colls]
+  (let [maxlen (apply max (map count colls))]
+    (map #(concat % (repeat (- maxlen (count %)) val)) colls)))
+
+(defn average-hop-percentage
+  [result-maps]
+  (let [hop-percentages (map :per-hop-percentage result-maps)
+        n-results (count hop-percentages)]
+    (->> hop-percentages
+         (apply append-val 0)
+         (apply map +)
+         (map #(/ % n-results)))))
 
 (comment
   (let [m sample-vals

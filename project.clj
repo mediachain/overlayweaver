@@ -9,10 +9,15 @@
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.cli "0.3.3"]
                  [org.clojure/core.async "0.2.374"]]
-  :jvm-opts ["-Dcom.sun.management.jmxremote"
+  :jvm-opts [; VisualVM options (connect to localhost, port 43210, no authentication)
+             "-Dcom.sun.management.jmxremote"
              "-Dcom.sun.management.jmxremote.ssl=false"
              "-Dcom.sun.management.jmxremote.authenticate=false"
-             "-Dcom.sun.management.jmxremote.port=43210"]
+             "-Dcom.sun.management.jmxremote.port=43210"
+
+             ; Increase max heap size to test large overlays / lots of keys
+             "-Xms512m"
+             "-Xmx4096m"]
   :aot [hamming-dht.shell]
   :main hamming-dht.shell
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.9.0"]
