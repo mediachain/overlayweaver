@@ -56,7 +56,7 @@
    Values are strings of the form \"value for <key>\"
   "
   [n id-byte-len distribution]
-  (let [freq-gen-pairs ; a vector of [weight generator] pairs, where generator produces an ID in a given range
+  (let [freq-gen-pairs                                      ; a vector of [weight generator] pairs, where generator produces an ID in a given range
         (fn [ref-id]
           (for [[[lo-bound hi-bound] w] distribution]
             [w (id-with-similarity-in-range-gen ref-id lo-bound hi-bound)]))]
@@ -107,12 +107,16 @@
             done? (or (>= retrieved-count num-known)
                       (> hop-count num-nodes))]
         (if done?
-          {:query-key key :threshold threshold
+          {:query-key      key :threshold threshold
            :total-expected num-known
-           :total-found retrieved-count
-           :hop-results hop-results
-           :num-hops (count hop-results)
-           :found-all? (>= retrieved-count num-known)}
+           :total-found    retrieved-count
+           :hop-results    hop-results
+           :found-per-hop  (map count hop-results)
+           :per-hop-percentage (if (> retrieved-count 0)
+                                 (map #(float (/ (count %) retrieved-count)) hop-results)
+                                 (map (constantly 0) hop-results))
+           :num-hops       (count hop-results)
+           :found-all?     (>= retrieved-count num-known)}
           (let [query-result (get-similar overlay key threshold hop-count)
                 returned-keys (into #{} (keys query-result))
                 new-keys (set/difference returned-keys retrieved-so-far)]
@@ -122,22 +126,40 @@
             (recur (conj hop-results new-keys))))))))
 
 (def sample-distribution
-  {[0.5 0.6] 1
-   [0.6 0.7] 2
-   [0.7 0.8] 1.5
-   [0.8 0.9] 1
+  {[0.5 0.6]  1
+   [0.6 0.7]  2
+   [0.7 0.8]  1.5
+   [0.8 0.9]  1
    [0.9 0.95] 0.25
-   [0 0.95] 2})
+   [0 0.95]   2})
 
 
 (def sample-vals (gen/generate (kv-map-with-frequencies-gen 100 20 sample-distribution)))
-(def dir (.openMultiValueDirectory
-           (DirectoryFactory/getProvider "VolatileMap")
-           ID String "/tmp" "testing-db" (DirectoryConfiguration/getDefaultConfiguration)))
 
-(defn put-dir [dir m]
-  (doseq [[k v] m]
-    (.put dir k v)))
+(def id-size-bytes 20)
+
+(defn measure-distribution-across-nodes
+  [algorithms n-nodes n-keys distribution search-threshold]
+  (let [m (gen/generate (kv-map-with-frequencies-gen n-keys id-size-bytes distribution))
+        all-keys (keys m)]
+    (->>
+      (for [algorithm algorithms]
+        (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
+          (emu/start! overlay)
+          (emu/put! overlay m)
+          (let [get-similar-results
+                (map #(get-all-similar overlay % search-threshold all-keys) all-keys)
+                desired-keys [:total-expected :total-found :num-hops :found-per-hop :found-all?
+                              :per-hop-percentage]
+                restructured
+                (->> get-similar-results
+                     (map (fn [result-map]
+                            (into {:query-key (keyword (str (:query-key result-map)))}
+                                  (select-keys result-map desired-keys))))
+                     (into []))] ; force realization of lazy seq before stopping the overlay
+            (emu/stop! overlay)
+            [(keyword algorithm) restructured])))
+      (into {}))))
 
 (comment
   (let [m sample-vals
