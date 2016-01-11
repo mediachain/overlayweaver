@@ -4,13 +4,15 @@
     [dht-test :refer [id-gen* id-distance sim->hamming
                       id-with-similarity-in-range-gen
                       id-with-similarity-gen]]
+    [clojure.edn :as edn]
     [clojure.set :as set]
     [clojure.java.io :as io]
     [clojure.test :as test :refer [use-fixtures run-tests]]
     [clojure.test.check.clojure-test :refer [defspec]]
     [clojure.test.check :as tc]
     [clojure.test.check.generators :as gen]
-    [clojure.test.check.properties :as prop])
+    [clojure.test.check.properties :as prop]
+    [com.stuartsierra.frequencies :as freq])
   (:import (ow.id ID)
            (ow.directory.comparator HammingIDComparator)
            (ow.directory DirectoryConfiguration DirectoryFactory)))
@@ -101,31 +103,52 @@
     {}
     data))
 
+(defn hop-count-for-value-info-set
+  [value-info-set]
+  (apply max (map #(.getExtraHopCount %) value-info-set)))
+
 (defn query-results-by-hop-count
   [res]
   (invert-data
     (into {} (for [[k value-info-set] res
-                   :let [hop-count (apply max (map #(.getExtraHopCount %) value-info-set))]]
+                   :let [hop-count (hop-count-for-value-info-set value-info-set)]]
                [k hop-count]))))
+
+(defn hop-count-frequencies
+  [query-result]
+  (let [hop-counts (map (fn [[_ value-info-set]]
+                             (hop-count-for-value-info-set value-info-set))
+                        query-result)]
+    (frequencies hop-counts)))
+
 
 (defn get-all-similar
   "Try to get all keys similar to `key` from `overlay`, within `threshold`.
   `known-within-threshold` is a set containing all keys in `overlay` that are
   known to be within the threshold.
 
-  Will iteratively call `.getSimilar` on a randomly selected dht node from `overlay`,
-  increasing the hop count until all known-similar keys are retrieved, or until hop count
-  is >= the total number of nodes.
+  Will call `.getSimilar` on a randomly selected dht node from `overlay`,
+  with a maximum 'extra hop' count equal to the total number of nodes in the overlay.
+  Returned results are examined to determine the number of hops needed to retreive them.
 
   Returns a map of the form:
-  {:query-key key
-   :threshold threshold
-   :total-expected (count known-within-threshold)
-   :total-found num-results
-   :hop-results [r0 r1 r2 r3]
-   :num-hops (count hop-results)}
+   key                 |    val
+   --------------------+--------------------------------
+   :query-key          | key used to search
+   :threshold          | search threshold
+   :raw-result         | unmodified result of calling `.getSimilar`
+   :total-expected     | number of known similar results to `key` found in `all-keys`
+   :total-found        | number of similar keys found
+   :found-all?         | true if total-expected == total-found
+   :by-hops            | map of <hop-number> to <set-of-results>
+   :hop-results        | vector of result sets returned for each hop. will contain empty sets if
+                       | no results were returned for that hop
+   :found-per-hop      | number of results found per hop
+   :per-hop-percentage | proportion of total results found per hop (range 0 - 1)
+   :num-hops           | number of hops required to retrieve all similar keys
 
-  Where `r0`, etc are the set of IDs retrieved for each hop
+  Note that 'hop #0' is the node responsible for the query key.  Subsequent hops are the
+  neighbors of the responsible node (and their neighbors, etc).
   "
   [overlay key threshold all-keys]
   (let [known-within-threshold (within-threshold all-keys key threshold)
@@ -135,49 +158,26 @@
         query-result (get-similar overlay key threshold max-hops)
         total-found (count query-result)
         by-hops (query-results-by-hop-count query-result)
-        hops-needed (+ 1 (apply max (keys by-hops)))
-        hop-results (map #(get by-hops % #{}) (range hops-needed))]
 
-    {:query-key key
-     :raw-result query-result
-     :by-hops by-hops
-     :threshold threshold
-     :total-expected num-known
-     :total-found total-found
-     :num-hops hops-needed
-     :hop-results hop-results
-     :found-per-hop (map count hop-results)
-     :found-all? (>= total-found num-known)
-     :per-hop-percentage (if (> total-found 0)
-                           (map #(float (/ (count %) total-found)) hop-results)
-                           (map (constantly 0) hop-results))}
+        hops-needed (+ 1 (apply max (or (seq (keys by-hops)) [0])))
+        hop-results (map #(get by-hops % #{}) (range hops-needed))
+        hop-percentages
+        (if (> total-found 0)
+          (map #(float (/ (count %) total-found)) hop-results)
+          (map (constantly 0) hop-results))]
 
-
-
-    #_(loop [hop-results []]
-      (let [hop-count (count hop-results)
-            retrieved-so-far (set (apply concat hop-results))
-            retrieved-count (count retrieved-so-far)
-            done? (or (>= retrieved-count num-known)
-                      (> hop-count num-nodes))]
-        (if done?
-          {:query-key      key :threshold threshold
-           :total-expected num-known
-           :total-found    retrieved-count
-           :hop-results    hop-results
-           :found-per-hop  (map count hop-results)
-           :per-hop-percentage (if (> retrieved-count 0)
-                                 (map #(float (/ (count %) retrieved-count)) hop-results)
-                                 (map (constantly 0) hop-results))
-           :num-hops       (count hop-results)
-           :found-all?     (>= retrieved-count num-known)}
-          (let [query-result (get-similar overlay key threshold hop-count)
-                returned-keys (into #{} (keys query-result))
-                new-keys (set/difference returned-keys retrieved-so-far)]
-            #_(println "query result: " query-result)
-            #_(println "returned-keys: " returned-keys)
-            #_(println "new-keys: " new-keys)
-            (recur (conj hop-results new-keys))))))))
+    {:query-key          key
+     :raw-result         query-result
+     :by-hops            by-hops
+     :threshold          threshold
+     :total-expected     num-known
+     :total-found        total-found
+     :num-hops           hops-needed
+     :hop-results        hop-results
+     :hop-frequencies    (hop-count-frequencies query-result)
+     :found-per-hop      (map count hop-results)
+     :found-all?         (>= total-found num-known)
+     :per-hop-percentage (into [] hop-percentages)}))
 
 (def sample-distribution
   {[0.5 0.6]  1
@@ -187,8 +187,22 @@
    [0.9 0.95] 0.25
    [0 0.95]   0.25})
 
-
 (def id-size-bytes 20)
+
+
+(defn save-sample-data
+  [filename data]
+  (let [string-ids
+        (into #{} (map (fn [[k _]] (str "id:" (.toString k))) data))]
+    (spit filename (pr-str string-ids))))
+
+(defn saved-sample-data
+  [filename]
+  (let [string-ids (edn/read-string (slurp filename))]
+    (into {}
+          (map (fn [id] [(ID/parseID id id-size-bytes) (str "value for " id)])
+               string-ids))))
+
 (emu/quiet-logger)
 
 (defn get-all-similar-for-all-keys
@@ -199,7 +213,7 @@
     (let [get-similar-results
           (map #(get-all-similar overlay % search-threshold all-keys) all-keys)
           desired-keys [:total-expected :total-found :num-hops :found-per-hop :found-all?
-                        :per-hop-percentage]
+                        :per-hop-percentage :hop-frequencies :by-hops]
           results
           (->> get-similar-results
                (map (fn [result-map]
@@ -210,34 +224,26 @@
       results)))
 
 (defn measure-distribution-across-nodes
+  [algorithms n-nodes m search-threshold]
+  (into {}
+        (for [algorithm (map name algorithms)]
+          (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
+            [(keyword algorithm) (get-all-similar-for-all-keys overlay m search-threshold)]))))
+
+(defn measure-with-given-distribution
   [algorithms n-nodes n-keys distribution search-threshold]
   (let [m (kv-map-with-frequencies-sample n-keys id-size-bytes distribution)]
-    (into {}
-          (for [algorithm algorithms]
-            (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
-              [(keyword algorithm) (get-all-similar-for-all-keys overlay m search-threshold)])))))
+    (measure-distribution-across-nodes algorithms n-nodes m search-threshold)))
 
-(defn measure-random-distribution-across-nodes
+(defn measure-with-random-distribution
   [algorithms n-nodes n-keys search-threshold]
   (let [m (gen/generate (kv-map-gen n-keys id-size-bytes))]
-    (into {}
-          (for [algorithm algorithms]
-            (let [overlay (emu/make-overlay n-nodes {:algorithm algorithm})]
-              [(keyword algorithm) (get-all-similar-for-all-keys overlay m search-threshold)])))))
+    (measure-distribution-across-nodes algorithms n-nodes m search-threshold)))
 
 
 (defn append-val [val & colls]
   (let [maxlen (apply max (map count colls))]
     (map #(concat % (repeat (- maxlen (count %)) val)) colls)))
-
-(defn average-hop-percentage
-  [result-maps]
-  (let [hop-percentages (map :per-hop-percentage result-maps)
-        n-results (count hop-percentages)]
-    (->> hop-percentages
-         (apply append-val 0)
-         (apply map +)
-         (map #(/ % n-results)))))
 
 (defn average-num-hops
   [result-maps]
@@ -246,6 +252,16 @@
         n-results (count hop-counts)]
     (float (/ sum n-results))))
 
+(defn hop-percentage-frequencies
+  [result-maps]
+  (let [max-hops (apply max (map :num-hops result-maps))]
+    (for [hop-num (range max-hops)]
+      (freq/bucket-frequencies 0.01
+                               (filter (partial not= :no-results)
+                                       (map #(get-in % [:per-hop-percentage hop-num] :no-results)
+                                            result-maps))))))
+
+;;; everything below is random repl-testing stuff
 
 (comment
   (let [m (kv-map-with-frequencies-sample 100 20 sample-distribution)
