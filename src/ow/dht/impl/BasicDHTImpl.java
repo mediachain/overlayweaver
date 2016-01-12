@@ -41,6 +41,7 @@ import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
 import ow.id.ID;
 import ow.id.IDAddressPair;
+import ow.id.comparator.AlgoBasedFromSrcIDComparator;
 import ow.id.comparator.AlgoBasedTowardTargetIDComparator;
 import ow.messaging.Message;
 import ow.messaging.MessageHandler;
@@ -353,10 +354,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 		RoutingAlgorithm algo = this.getRoutingService().getRoutingAlgorithm();
 
-		TreeSet<ID>[] closestNodes = new TreeSet[keys.length];
+		Set<ID>[] potentialTargets = new Set[keys.length];
 		Set<ID>[] alreadyContacted = new Set[keys.length];
 		for (int i = 0; i < keys.length; i++) {
-			closestNodes[i] = new TreeSet<>();
+			potentialTargets[i] = new HashSet<>();
 			alreadyContacted[i] = new HashSet<>();
 		}
 
@@ -369,21 +370,25 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 				IDAddressPair[] candidates = lastHopResults[i].getResponsibleNodeCandidates();
 				RoutingHop[] route = lastHopResults[i].getRoute();
+				ID lastResponsibleNode = route[route.length - 1].getIDAddressPair().getID();
 				// the first candidate is the node that returned the result, followed by its neighbors,
 				// sorted by proximity to the target key.
-				alreadyContacted[i].add(route[route.length - 1].getIDAddressPair().getID());
+				alreadyContacted[i].add(lastResponsibleNode);
 				for (IDAddressPair node : candidates) {
-					closestNodes[i].add(node.getID());
+					potentialTargets[i].add(node.getID());
 				}
 
-				closestNodes[i].removeAll(alreadyContacted[i]);
-				//closestNodes[i].remove(getSelfIDAddressPair().getID());
-				if (closestNodes[i].isEmpty()) {
-					//targets[i] = keys[i];
+				potentialTargets[i].removeAll(alreadyContacted[i]);
+				if (potentialTargets[i].isEmpty()) {
 					continue;
 				}
 
-				targets[i] = closestNodes[i].first();
+				AlgoBasedTowardTargetIDComparator cmp =
+						new AlgoBasedTowardTargetIDComparator(algo, lastResponsibleNode);
+				TreeSet<ID> closestNodesToPreviousTarget = new TreeSet<>(cmp);
+				closestNodesToPreviousTarget.addAll(potentialTargets[i]);
+
+				targets[i] = closestNodesToPreviousTarget.first();
 			}
 
 			// targets now contains the IDs of the nodes nearest to the responsible nodes from last round
