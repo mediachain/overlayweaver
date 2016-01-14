@@ -176,7 +176,7 @@ public final class CHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	@Override
-	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops, int numDesiredResults)
 			throws RoutingException {
 		return getSimilar(key, similarity);
 	}

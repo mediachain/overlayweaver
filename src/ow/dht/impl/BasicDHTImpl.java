@@ -246,15 +246,15 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
 			throws RoutingException {
-		return getSimilar(key, threshold, config.getSimilarSearchExtraHopCount());
+		return getSimilar(key, threshold, config.getSimilarSearchExtraHopCount(), -1);
 	}
 
-	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops)
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops, int numResultsDesired)
 		throws RoutingException {
 		ID[] keys = { key };
 		Float[] thresholds = { threshold };
 		Map<ID, Set<ValueInfo<V>>>[] results = new Map[keys.length];
-		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results, extraHops);
+		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results, extraHops, numResultsDesired);
 
 		if (routingRes[0] == null) {
 			throw new RoutingException();
@@ -301,7 +301,8 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	protected RoutingResult[] getSimilarRemotely(ID[] keys,
 																							 Float[] thresholds,
 																							 Map<ID, Set<ValueInfo<V>>>[] results,
-																							 int extraHops) {
+																							 int extraHops,
+																							 int numResultsDesired) {
 		if (!config.getSearchKeysForSimilarity()) {
 			// fallback to getRemotely()
 			Set<ValueInfo<V>>[] exactResults = new Set[keys.length];
@@ -363,6 +364,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 		for (int hop = 1; hop <= extraHops; hop++) {
 			for (int i = 0; i < keys.length; i++) {
+				if (results[i] != null && results[i].size() >= numResultsDesired) {
+					return routingRes; // FIXME: this is incorrect if keys.length > 1
+				}
+
 				if (lastHopResults[i] == null) {
 					//targets[i] = keys[i];
 					continue;

@@ -93,9 +93,14 @@ public interface DHT<V extends Serializable> extends HighLevelService {
 	 * nodes beyond the node responsible for the search key.
 	 * @param key
 	 * @param similarity - threshold within which similar keys will be returned (range: 0-1)
+	 * @param extraHops - number of hops to query after the node responsible for `key`
+	 * @param numResultsDesired - will stop querying extra hops after we've retrieved this many results
+	 *                          actual # of results returned may differ.
+	 *                          If `numResultsDesired` is negative, will always extend query
+	 *                          to `extraHops` nodes.
 	 * @return A map of key -> set of values, sorted by similarity
 	 */
-	Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops)
+	Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float similarity, int extraHops, int numResultsDesired)
 			throws RoutingException;
 
 

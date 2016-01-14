@@ -101,7 +101,7 @@ public final class GetSimilarCommand implements Command<DHT<String>> {
 
 			try {
 				if (extraHops >= 0) {
-					results[i] = dht.getSimilar(keys[i], thresholds[i], extraHops);
+					results[i] = dht.getSimilar(keys[i], thresholds[i], extraHops, -1);
 				} else {
 					results[i] = dht.getSimilar(keys[i], thresholds[i]);
 				}

@@ -59,7 +59,7 @@
    Values are strings of the form \"value for <key>\"
   "
   [n id-byte-len distribution]
-  (let [freq-gen-pairs                                      ; a vector of [weight generator] pairs, where generator produces an ID in a given range
+  (let [freq-gen-pairs ; a vector of [weight generator] pairs, where generator produces an ID in a given range
         (fn [ref-id]
           (for [[[lo-bound hi-bound] w] distribution]
             [w (id-with-similarity-in-range-gen ref-id lo-bound hi-bound)]))]
@@ -155,7 +155,7 @@
         num-known (count known-within-threshold)
         num-nodes (count (:nodes overlay))
         max-hops num-nodes
-        query-result (get-similar overlay key threshold max-hops)
+        query-result (get-similar overlay key threshold max-hops num-known)
         total-found (count query-result)
         by-hops (query-results-by-hop-count query-result)
 
@@ -203,13 +203,14 @@
           (map (fn [id] [(ID/parseID id id-size-bytes) (str "value for " id)])
                string-ids))))
 
-(emu/quiet-logger)
+;(emu/quiet-logger)
 
 (defn get-all-similar-for-all-keys
   [overlay m search-threshold]
   (let [all-keys (keys m)]
     (emu/start! overlay)
     (emu/put! overlay m)
+    (Thread/sleep 10000)
     (let [get-similar-results
           (map #(get-all-similar overlay % search-threshold all-keys) all-keys)
           desired-keys [:total-expected :total-found :num-hops :found-per-hop :found-all?
@@ -223,6 +224,7 @@
       (emu/stop! overlay)
       results)))
 
+
 (defn measure-distribution-across-nodes
   [algorithms n-nodes m search-threshold]
   (into {}
@@ -233,12 +235,12 @@
 (defn measure-with-given-distribution
   [algorithms n-nodes n-keys distribution search-threshold]
   (let [m (kv-map-with-frequencies-sample n-keys id-size-bytes distribution)]
-    (measure-distribution-across-nodes algorithms n-nodes m search-threshold)))
+    (measure-distribution-across-nodes algorithms n-nodes m search-threshold))
 
-(defn measure-with-random-distribution
-  [algorithms n-nodes n-keys search-threshold]
-  (let [m (gen/generate (kv-map-gen n-keys id-size-bytes))]
-    (measure-distribution-across-nodes algorithms n-nodes m search-threshold)))
+  (defn measure-with-random-distribution
+    [algorithms n-nodes n-keys search-threshold]
+    (let [m (gen/generate (kv-map-gen n-keys id-size-bytes))]
+      (measure-distribution-across-nodes algorithms n-nodes m search-threshold))))
 
 
 (defn append-val [val & colls]
@@ -257,9 +259,8 @@
   (let [max-hops (apply max (map :num-hops result-maps))]
     (for [hop-num (range max-hops)]
       (freq/bucket-frequencies 0.01
-                               (filter (partial not= :no-results)
-                                       (map #(get-in % [:per-hop-percentage hop-num] :no-results)
-                                            result-maps))))))
+                               (map #(get-in % [:per-hop-percentage hop-num] 0)
+                                    result-maps)))))
 
 ;;; everything below is random repl-testing stuff
 
