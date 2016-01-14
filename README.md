@@ -19,7 +19,7 @@ Most of the testing and evaluation code is written in clojure, with dependencies
 
 `lein run` will start a DHT "shell" that accepts commands on standard input, and can connect to
 an overlay network running either locally or remotely.  
-See [shell.clj](https://github.com/mine-code/overlayweaver/blob/hamming-dht/clj/hamming_dht/shell.clj) 
+See [shell.clj](https://github.com/mine-code/overlayweaver/blob/hamming-dht/clj/src/hamming_dht/shell.clj) 
 for command line options.
  
 Much of the clojure code is designed to be used at a REPL, so it's recommended that you set up a
