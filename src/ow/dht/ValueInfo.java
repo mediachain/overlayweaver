@@ -41,6 +41,16 @@ public final class ValueInfo<V extends Serializable> implements Expirable, Seria
 	public V getValue() { return this.value; }
 	public long setTTL(long ttl) { long old = this.attr.ttl; this.attr.ttl = ttl; return old; }
 	public long getTTL() { return this.attr.ttl; }
+	public int getExtraHopCount() { return this.attr.extraHopCount; }
+	public int setExtraHopCount(int count) {
+		int old = this.attr.extraHopCount;
+		this.attr.extraHopCount = count;
+		return old;
+	}
+	public void bumpExtraHopCount() {
+		this.setExtraHopCount(this.attr.extraHopCount + 1);
+	}
+
 	public ByteArray getHashedSecret() { return this.attr.hashedSecret; }
 
 	public int hashCode() {	// ignore TTL
@@ -88,17 +98,31 @@ public final class ValueInfo<V extends Serializable> implements Expirable, Seria
 	public final static class Attributes implements Serializable {
 		private long ttl;
 		private ByteArray hashedSecret;
+		private int extraHopCount;
 
 		public Attributes(long ttl, ByteArray hashedSecret) {
 			this.ttl = ttl;
 			this.hashedSecret = hashedSecret;
+			this.extraHopCount = 0;
+		}
+
+		public Attributes(long ttl, ByteArray hashedSecret, int extraHopCount) {
+			this.ttl = ttl;
+			this.hashedSecret = hashedSecret;
+			this.extraHopCount = extraHopCount;
+		}
+
+		public Attributes(Attributes a, int extraHopCount) {
+			this(a.ttl, a.hashedSecret, extraHopCount);
 		}
 
 		public long getTTL() { return this.ttl; }
 		public ByteArray getHashedSecret() { return this.hashedSecret; }
+		public int getExtraHopCount() { return this.extraHopCount; }
 
 		public int hashCode() {	// consider TTL
 			int ret = ((int)ttl) ^ (int)(ttl >>> 32);
+			ret ^= this.extraHopCount;
 
 			if (this.hashedSecret != null)
 				ret ^= this.hashedSecret.hashCode();
@@ -112,6 +136,7 @@ public final class ValueInfo<V extends Serializable> implements Expirable, Seria
 			Attributes other = (Attributes)o;
 
 			if (this.ttl != other.ttl) return false;
+			if (this.extraHopCount != other.extraHopCount) return false;
 
 			if (this.hashedSecret == null) {
 				if (other.hashedSecret != null) return false;

@@ -17,8 +17,7 @@
 
 package ow.directory.berkeleydb;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 
 import ow.directory.MultiValueDirectory;
@@ -30,14 +29,31 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
+import ow.directory.comparator.KeySimilarityComparator;
 
 public class MultiValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implements MultiValueDirectory<K,V> {
-	protected MultiValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName) throws Exception {
-		super(typeK, typeV, env, dbName, true);
+	protected MultiValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName,
+																	KeySimilarityComparator<K> similarityComparator)
+			throws Exception {
+		super(typeK, typeV, env, dbName, true, similarityComparator);
 	}
 
 	public Set<V> get(K key) throws DatabaseException {
 		return getAndRemove(key, false);
+	}
+
+	public SortedMap<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+
+		TreeMap<K,Set<V>> results = (similarityComparator == null) ?
+				new TreeMap<>() :
+				new TreeMap<>(similarityComparator.comparatorForKey(key));
+
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+		return results;
 	}
 
 	public V put(K key, V value) throws Exception {

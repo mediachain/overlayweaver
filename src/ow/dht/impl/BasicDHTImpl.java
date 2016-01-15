@@ -21,19 +21,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import ow.dht.ByteArray;
-import ow.dht.DHT;
-import ow.dht.DHTConfiguration;
-import ow.dht.ValueInfo;
+import ow.dht.*;
 import ow.dht.impl.message.DHTReplyMessage;
 import ow.dht.impl.message.GetMessage;
 import ow.dht.impl.message.PutMessage;
@@ -49,6 +41,8 @@ import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
 import ow.id.ID;
 import ow.id.IDAddressPair;
+import ow.id.comparator.AlgoBasedFromSrcIDComparator;
+import ow.id.comparator.AlgoBasedTowardTargetIDComparator;
 import ow.messaging.Message;
 import ow.messaging.MessageHandler;
 import ow.messaging.MessageSender;
@@ -57,15 +51,7 @@ import ow.messaging.MessagingConfiguration;
 import ow.messaging.MessagingFactory;
 import ow.messaging.MessagingProvider;
 import ow.messaging.Signature;
-import ow.routing.CallbackOnRoute;
-import ow.routing.RoutingAlgorithmConfiguration;
-import ow.routing.RoutingAlgorithmFactory;
-import ow.routing.RoutingAlgorithmProvider;
-import ow.routing.RoutingException;
-import ow.routing.RoutingResult;
-import ow.routing.RoutingService;
-import ow.routing.RoutingServiceFactory;
-import ow.routing.RoutingServiceProvider;
+import ow.routing.*;
 
 /**
  * A basic implementation of DHT service over a routing service.
@@ -74,6 +60,9 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	final static Logger logger = Logger.getLogger("dht");
 
 	private final static String GLOBAL_DB_NAME = "global";
+
+	private final static String CALLBACK_NAME_GET = "GET";
+	private final static String CALLBACK_NAME_GET_SIMILAR = "GET_SIMILAR";
 
 	// members common to higher level services (DHT and Mcast)
 
@@ -254,6 +243,26 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		return results[0];
 	}
 
+
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold)
+			throws RoutingException {
+		return getSimilar(key, threshold, config.getSimilarSearchExtraHopCount(), -1);
+	}
+
+	public Map<ID, Set<ValueInfo<V>>> getSimilar(ID key, float threshold, int extraHops, int numResultsDesired)
+		throws RoutingException {
+		ID[] keys = { key };
+		Float[] thresholds = { threshold };
+		Map<ID, Set<ValueInfo<V>>>[] results = new Map[keys.length];
+		RoutingResult[] routingRes = this.getSimilarRemotely(keys, thresholds, results, extraHops, numResultsDesired);
+
+		if (routingRes[0] == null) {
+			throw new RoutingException();
+		}
+
+		return results[0];
+	}
+
 	public Set<ValueInfo<V>>[] get(ID[] keys) {
 		Set<ValueInfo<V>>[] results = new Set/*<ValueInfo<V>>*/[keys.length];
 
@@ -261,9 +270,10 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	}
 
 	protected RoutingResult[] getRemotely(ID[] keys, Set<ValueInfo<V>>[] results) {
-		Serializable[][] args = new Serializable[keys.length][1];
+		Serializable[][] args = new Serializable[keys.length][2];
 		for (int i = 0; i < keys.length; i++) {
-			args[i][0] = keys[i];
+			args[i][0] = CALLBACK_NAME_GET;
+			args[i][1] = keys[i];
 		}
 
 		Serializable[][] callbackResultContainer = new Serializable[keys.length][1];
@@ -283,6 +293,154 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 
 			if (results[i] == null) results[i] = new HashSet<ValueInfo<V>>();
 			// routing succeeded and results[i] should not be null.
+		}
+
+		return routingRes;
+	}
+
+	protected RoutingResult[] getSimilarRemotely(ID[] keys,
+																							 Float[] thresholds,
+																							 Map<ID, Set<ValueInfo<V>>>[] results,
+																							 int extraHops,
+																							 int numResultsDesired) {
+		if (!config.getSearchKeysForSimilarity()) {
+			// fallback to getRemotely()
+			Set<ValueInfo<V>>[] exactResults = new Set[keys.length];
+			RoutingResult[] routingRes = getRemotely(keys, exactResults);
+			for (int i = 0; i < keys.length; i++) {
+				if (exactResults[i] == null) {
+					results[i] = new TreeMap<>();
+				} else {
+					TreeMap<ID, Set<ValueInfo<V>>> sorted = new TreeMap<>();
+					sorted.put(keys[i], exactResults[i]);
+					results[i] = sorted;
+				}
+			}
+			return routingRes;
+		}
+
+		Serializable[][] args = new Serializable[keys.length][3];
+		for (int i = 0; i < keys.length; i++) {
+			args[i][0] = CALLBACK_NAME_GET_SIMILAR;
+			args[i][1] = keys[i];
+			args[i][2] = thresholds[i];
+		}
+
+		Serializable[][] callbackResultContainer = new Serializable[keys.length][1];
+
+		// get from the responsible node by RoutingService#invokeCallbacksOnRoute()
+		RoutingResult[] routingRes = this.routingSvc.invokeCallbacksOnRoute(
+				keys, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
+				callbackResultContainer, -1, args);
+
+		this.preserveRoute(keys, routingRes);
+
+		for (int i = 0; i < keys.length; i++) {
+			if (routingRes[i] == null) continue;
+
+			if (callbackResultContainer[i] != null)
+				results[i] = (Map<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+		}
+
+		// If there are no spare candidates, we can't query the neighbors of the responsible nodes
+		if (config.getNumSpareResponsibleNodeCandidates() < 1) {
+			return routingRes;
+		}
+
+		// To retrieve more similar results, query the neighbors of the nodes that returned
+		// values, up to the max number of hops specified in `extraHops`
+
+		ID[] targets = new ID[keys.length];
+		RoutingResult[] lastHopResults = routingRes;
+
+		RoutingAlgorithm algo = this.getRoutingService().getRoutingAlgorithm();
+
+		Set<ID>[] potentialTargets = new Set[keys.length];
+		Set<ID>[] alreadyContacted = new Set[keys.length];
+		for (int i = 0; i < keys.length; i++) {
+			potentialTargets[i] = new HashSet<>();
+			alreadyContacted[i] = new HashSet<>();
+		}
+
+		for (int hop = 1; hop <= extraHops; hop++) {
+			for (int i = 0; i < keys.length; i++) {
+				if (results[i] != null && results[i].size() >= numResultsDesired) {
+					return routingRes; // FIXME: this is incorrect if keys.length > 1
+				}
+
+				if (lastHopResults[i] == null) {
+					//targets[i] = keys[i];
+					continue;
+				}
+
+				IDAddressPair[] candidates = lastHopResults[i].getResponsibleNodeCandidates();
+				RoutingHop[] route = lastHopResults[i].getRoute();
+				ID lastResponsibleNode = route[route.length - 1].getIDAddressPair().getID();
+				// the first candidate is the node that returned the result, followed by its neighbors,
+				// sorted by proximity to the target key.
+				alreadyContacted[i].add(lastResponsibleNode);
+				for (IDAddressPair node : candidates) {
+					potentialTargets[i].add(node.getID());
+				}
+
+				potentialTargets[i].removeAll(alreadyContacted[i]);
+				if (potentialTargets[i].isEmpty()) {
+					continue;
+				}
+
+				AlgoBasedTowardTargetIDComparator cmp =
+						new AlgoBasedTowardTargetIDComparator(algo, lastResponsibleNode);
+				TreeSet<ID> closestNodesToPreviousTarget = new TreeSet<>(cmp);
+				closestNodesToPreviousTarget.addAll(potentialTargets[i]);
+
+				targets[i] = closestNodesToPreviousTarget.first();
+			}
+
+			// targets now contains the IDs of the nodes nearest to the responsible nodes from last round
+			// so we query those nodes using the same args
+			// logger.warning("Extra Hop #" + hop + " contacting " + targets);
+			callbackResultContainer = new Serializable[keys.length][1];
+			lastHopResults = this.routingSvc.invokeCallbacksOnRoute(
+					targets, config.getNumTimesGets() + config.getNumSpareResponsibleNodeCandidates(),
+					callbackResultContainer, -1, args);
+
+			// merge results from this round with those from previous hops
+			for (int i = 0; i < keys.length; i++) {
+				if (lastHopResults[i] == null || callbackResultContainer[i] == null) {
+					continue;
+				}
+
+
+				Map<ID, Set<ValueInfo<V>>> accumulatedResults = results[i];
+				Map<ID, Set<ValueInfo<V>>> hopResult =
+						(Map<ID, Set<ValueInfo<V>>>)callbackResultContainer[i][0];
+
+				// For each entry in the new map, merge into the accumulatedResults.
+				// If the same ID key exists in both, merge both sets of values
+				for (Map.Entry<ID, Set<ValueInfo<V>>> entry : hopResult.entrySet()) {
+
+					HashSet<ValueInfo<V>> hopVals = new HashSet<>();
+					// Increase the 'extraHopCount' for the ValueInfo objects returned
+					for (ValueInfo<V> v : entry.getValue()) {
+						if (accumulatedResults.containsKey(entry.getKey())) {
+							hopVals.add(v);
+						} else {
+							ValueInfo<V> withNewHopCount = new ValueInfo<>(
+									v.getValue(),
+									new ValueInfo.Attributes(v.getAttributes(), hop));
+							hopVals.add(withNewHopCount);
+						}
+					}
+
+					final int thisHop = hop;
+					accumulatedResults.merge(entry.getKey(), hopVals,
+							(Set<ValueInfo<V>> prevVals, Set<ValueInfo<V>> newVals) -> {
+								prevVals.addAll(newVals);
+								return prevVals;
+							});
+				}
+				results[i] = accumulatedResults;
+			}
 		}
 
 		return routingRes;
@@ -799,14 +957,21 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 	private void prepareCallbacks(RoutingService routingSvc) {
 		routingSvc.addCallbackOnRoute(new CallbackOnRoute() {
 			public Serializable process(ID target, int tag, Serializable[] args, IDAddressPair lastHop, boolean onResponsibleNode) {
-				ID key;
+				String callbackName = (String)args[0];
+				ID key = (ID)args[1];
 
-				logger.log(Level.INFO, "A callback invoked: " + (ID)args[0]);
+				logger.log(Level.INFO, "A callback invoked: " + callbackName + ": " + key);
 
-				// get
-				key = (ID)args[0];
 
-				return (Serializable)getValueLocally(key, globalDir);
+				if (callbackName.equals(CALLBACK_NAME_GET)) {
+					return (Serializable) getValueLocally(key, globalDir);
+				} else if (callbackName.equals(CALLBACK_NAME_GET_SIMILAR)) {
+					float threshold = (Float)args[2];
+					return (Serializable) getSimilarValuesLocally(key, threshold, globalDir);
+				}
+
+				logger.log(Level.WARNING, "Unknown callback name " + callbackName);
+				return new HashSet();
 			}
 		});
 	}
@@ -824,5 +989,18 @@ public class BasicDHTImpl<V extends Serializable> implements DHT<V> {
 		}
 
 		return returnedValues;
+	}
+
+	protected Map<ID, Set<ValueInfo<V>>>
+		getSimilarValuesLocally(ID key, float threshold, MultiValueDirectory<ID, ValueInfo<V>> dir) {
+
+		try {
+			Map<ID, Set<ValueInfo<V>>> result = dir.getSimilar(key, threshold);
+			return result;
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "An Exception thrown by Directory#getSimilar().", e);
+			return null;
+		}
+
 	}
 }

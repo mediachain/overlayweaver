@@ -52,6 +52,9 @@ public class DHTConfiguration extends HighLevelServiceConfiguration {
 
 	public final static String DEFAULT_VALUE_ENCODING = "UTF-8";
 
+	public final static boolean DEFAULT_SEARCH_KEYS_FOR_SIMILARITY = true;
+	public final static int DEFAULT_SIMILAR_SEARCH_HOP_COUNT = 4;
+
 
 	private String implName = DEFAULT_IMPL_NAME;
 	public String getImplementationName() { return this.implName; }
@@ -225,4 +228,21 @@ public class DHTConfiguration extends HighLevelServiceConfiguration {
 		this.valueEncoding = encoding;
 		return old;
 	}
+
+	private boolean searchKeysForSimilarity = DEFAULT_SEARCH_KEYS_FOR_SIMILARITY;
+	public boolean getSearchKeysForSimilarity() { return searchKeysForSimilarity; }
+	public boolean setSearchKeysForSimilarity(boolean flag) {
+		boolean old = this.searchKeysForSimilarity;
+		this.searchKeysForSimilarity = flag;
+		return old;
+	}
+
+	private int similarSearchExtraHopCount = DEFAULT_SIMILAR_SEARCH_HOP_COUNT;
+	public int getSimilarSearchExtraHopCount() { return similarSearchExtraHopCount; }
+	public int setSimilarSearchExtraHopCount(int count) {
+		int old = count;
+		this.similarSearchExtraHopCount = count;
+		return old;
+	}
+
 }

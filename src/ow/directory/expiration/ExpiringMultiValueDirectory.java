@@ -18,10 +18,10 @@
 package ow.directory.expiration;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import ow.directory.MultiValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 import ow.util.Timer;
 
 public class ExpiringMultiValueDirectory<K,V> extends AbstractExpiringDirectory<K,V>
@@ -112,6 +112,25 @@ public class ExpiringMultiValueDirectory<K,V> extends AbstractExpiringDirectory<
 
 	public Set<V> get(K key) throws Exception {
 		return getAndRemove(key, false);
+	}
+
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.dir.getSimilarityComparator();
+	}
+
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return this.dir.getSimilarKeys(key, threshold);
+	}
+
+	public Map<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+
+		HashMap<K,Set<V>> results = new HashMap<>();
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+		return results;
 	}
 
 	public Set<V> remove(K key) throws Exception {

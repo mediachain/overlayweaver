@@ -18,13 +18,16 @@
 package ow.directory.expiration;
 
 import java.io.Serializable;
-import java.util.Set;
+import java.util.*;
+import java.util.logging.Logger;
 
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 import ow.util.Timer;
 
 public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory<K,V>
 		implements SingleValueDirectory<K,V>, Serializable {
+	private final static Logger logger = Logger.getLogger("directory");
 	private SingleValueDirectory<K,ExpiringValue<V>> internalDirectory;
 
 	public ExpiringSingleValueDirectory(SingleValueDirectory<K,ExpiringValue<V>> dir,
@@ -104,6 +107,25 @@ public class ExpiringSingleValueDirectory<K,V> extends AbstractExpiringDirectory
 
 	public V get(K key) throws Exception {
 		return getAndRemove(key, false);
+	}
+
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return internalDirectory.getSimilarityComparator();
+	}
+
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return internalDirectory.getSimilarKeys(key, threshold);
+	}
+
+	public Map<K, V> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashMap<K,V> results = new HashMap<>();
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+
+		return results;
 	}
 
 	public V remove(K key) throws Exception {

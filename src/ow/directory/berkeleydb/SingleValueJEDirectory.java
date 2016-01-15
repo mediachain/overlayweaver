@@ -22,6 +22,9 @@ import ow.directory.SingleValueDirectory;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.Transaction;
+import ow.directory.comparator.KeySimilarityComparator;
+
+import java.util.*;
 
 /**
  * A directory that maps a key to a value.
@@ -31,8 +34,26 @@ import com.sleepycat.je.Transaction;
  * @param <V> Type of values.
  */
 public class SingleValueJEDirectory<K,V> extends AbstractJEDirectory<K,V> implements SingleValueDirectory<K,V> {
-	protected SingleValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName) throws Exception {
-		super(typeK, typeV, env, dbName, false);
+
+	protected SingleValueJEDirectory(Class<K> typeK, Class<V> typeV, Environment env, String dbName,
+																	 KeySimilarityComparator<K> similarityComparator)
+			throws Exception {
+		super(typeK, typeV, env, dbName, false, similarityComparator);
+	}
+
+	public SortedMap<K,V> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+		KeySimilarityComparator<K> similarityComparator = this.getSimilarityComparator();
+
+		TreeMap<K,V> results = (similarityComparator == null) ?
+				new TreeMap<>() :
+				new TreeMap<>(similarityComparator.comparatorForKey(key));
+
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+
+		return results;
 	}
 
 	public V get(K key) throws DatabaseException {

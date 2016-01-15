@@ -23,10 +23,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.URLDecoder;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
@@ -286,6 +283,43 @@ public final class XmlRpcDHTServer implements Interruptible {
 							else {
 								resultString = "Get results:";
 							}
+						}
+						catch (RoutingException e) {
+							resultString = "Routing failed.";
+						}
+					}
+					else if (op.equals("get-similar")) {
+						try {
+							float threshold = 1.0f;
+							String thresholdStr = paramTable.get("threshold");
+
+							try {
+								threshold = Float.parseFloat(thresholdStr);
+							} catch (NumberFormatException e) { }
+
+							Map<ID, Set<ValueInfo<String>>> results = dht.getSimilar(keyID, threshold);
+
+							if (results != null && !results.isEmpty()) {
+								getResult = new HashSet<>();
+								for (Set<ValueInfo<String>> valueSet : results.values()) {
+									getResult.addAll(valueSet);
+								}
+
+								StringBuilder sb = new StringBuilder("Found similar keys: ");
+								for (ID k : results.keySet()) {
+									sb.append(k.toString());
+									sb.append(" ");
+								}
+
+								resultString = sb.toString();
+							}	else {
+								resultString = "No values associated with keys similar to \"" + key + "\" within " +
+								" threshold " + thresholdStr + ".";
+							}
+
+							lookupPerformed = true;
+
+
 						}
 						catch (RoutingException e) {
 							resultString = "Routing failed.";
@@ -566,6 +600,18 @@ public final class XmlRpcDHTServer implements Interruptible {
 			wtr.println("<td>get</td>");
 			wtr.println("<td colspan=\"4\"><input type=\"text\" name=\"key\" size=\"10\""
 					+ (key != null ? " value=\"" + HTMLUtil.stringInHTML(key) + "\"" : "") + "></td>");
+			wtr.println("<td><input type=\"submit\" value=\"submit\"></td>");
+			wtr.println("</tr>");
+			wtr.println("</form>");
+
+			wtr.println("<form action=\"\" method=\"get-similar\" accept-charset=\"UTF-8\">");
+			wtr.println("<input type=\"hidden\" name=\"op\" value=\"get-similar\">");
+			wtr.println("<tr>");
+			wtr.println("<td>get-similar</td>");
+			wtr.println("<td><input type=\"text\" name=\"key\" size=\"10\""
+					+ (key != null ? " value=\"" + HTMLUtil.stringInHTML(key) + "\"" : "") + "></td>");
+			wtr.println("<td colspan=\"3\"><input type=\"text\" name=\"threshold\" size=\"10\" " +
+				"placeholder=\"threshold\"/></td>");
 			wtr.println("<td><input type=\"submit\" value=\"submit\"></td>");
 			wtr.println("</tr>");
 			wtr.println("</form>");

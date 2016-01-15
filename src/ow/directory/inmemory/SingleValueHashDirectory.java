@@ -23,19 +23,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.AbstractMap;
 
 import ow.directory.DirectoryConfiguration;
 import ow.directory.DirectoryConfiguration.HeapOverflowAction;
 import ow.directory.OutOfHeapException;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.HammingIDComparator;
+import ow.directory.comparator.KeySimilarityComparator;
+import ow.directory.comparator.KeySimilarityComparatorFactory;
+import ow.id.ID;
 
 public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory<K,V> {
 	private final static Logger logger = Logger.getLogger("directory");
@@ -47,6 +47,7 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 	private Map<K,V> map;
 	private boolean changed = false;	// if true, this map is to be synchronized
 	private Synchronizer synchronizer;
+	private final KeySimilarityComparator<K> similarityComparator;
 
 	protected SingleValueHashDirectory(Class typeK, Class typeV, String workingDir, String dbName, String dbNameOld,
 			DirectoryConfiguration config, long syncInterval) throws Exception {
@@ -82,6 +83,9 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 		}
 
 		this.map = Collections.synchronizedMap(this.rawMap);
+
+		String metric = config.getSimilarityMetric();
+		this.similarityComparator =  KeySimilarityComparatorFactory.getComparator(typeK, metric);
 
 		// start a synchronizing thread
 		if (this.syncInterval > 0) {
@@ -121,6 +125,45 @@ public final class SingleValueHashDirectory<K,V> implements SingleValueDirectory
 
 	public V get(K key) {
 		return this.map.get(key);
+	}
+
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return similarityComparator;
+	}
+
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		if (similarityComparator == null) {
+			logger.warning("Similarity comparison not supported");
+			if (this.keySet().contains(key)) {
+				return new HashSet<K>() {{
+					add(key);
+				}};
+			}
+			return new HashSet<>();
+		}
+
+		// TODO: use more efficient impl than brute-force search of entire keyset :)
+		Set<K> keys = keySet();
+		Set<K> results = new HashSet<>();
+
+		for (K candidate : keys) {
+			float sim = similarityComparator.similarity(key, candidate);
+			if (sim >= threshold) {
+				results.add(candidate);
+			}
+		}
+		return results;
+	}
+
+	public Map<K,V> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+		HashMap<K,V> results = new HashMap<>();
+
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+
+		return results;
 	}
 
 	public V put(K key, V value) throws OutOfHeapException {

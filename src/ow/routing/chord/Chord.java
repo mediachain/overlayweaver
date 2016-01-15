@@ -38,7 +38,7 @@ import ow.util.Timer;
  * This algorithm is described in Figure 7 in the Chord paper
  * "Chord: A Scalable Peer-to-peer Lookup Service for Internet Applications".
  */
-public final class Chord extends AbstractChord {
+public class Chord extends AbstractChord {
 	private ChordConfiguration config;
 
 	// daemons

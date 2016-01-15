@@ -17,6 +17,8 @@
 
 package ow.routing;
 
+import ow.routing.chord.HammingChordProvider;
+
 import java.security.NoSuchProviderException;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +29,8 @@ public class RoutingAlgorithmFactory {
 	private final static Logger logger = Logger.getLogger("routing");
 
 	private final static Class/*<RoutingAlgorithmProvider>*/[] PROVIDERS = {
+		HammingChordProvider.class,	// "HammingChord"
+		ow.routing.kademlia.HammingKademliaProvider.class, // "HammingKademlia"
 		ow.routing.chord.ChordProvider.class,					// "Chord"
 		ow.routing.kademlia.KademliaProvider.class,			// "Kademlia"
 		ow.routing.koorde.KoordeProvider.class,				// "Koorde"

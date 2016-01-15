@@ -31,6 +31,8 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.Transaction;
+import ow.directory.comparator.KeySimilarityComparator;
+import ow.directory.comparator.KeySimilarityComparatorFactory;
 
 public class BerkeleyDBProvider extends DirectoryProvider {
 	private final static String NAME = "BerkeleyDB";
@@ -47,11 +49,14 @@ public class BerkeleyDBProvider extends DirectoryProvider {
 	}
 
 	protected <K,V> SingleValueDirectory<K,V> provideSingleValueDirectory(Class typeK, Class typeV, String workingDir, String dbName,
-			DirectoryConfiguration config /* ignored */) throws Exception {
+			DirectoryConfiguration config) throws Exception {
 		init();
 
 		Environment env = this.getEnvironment(new File(workingDir));
-		return new SingleValueJEDirectory<K,V>(typeK, typeV, env, dbName);
+		KeySimilarityComparator<K> similarityComparator =
+			KeySimilarityComparatorFactory.getComparator(typeK, config.getSimilarityMetric());
+
+		return new SingleValueJEDirectory<K,V>(typeK, typeV, env, dbName, similarityComparator);
 	}
 
 	protected <K,V> MultiValueDirectory<K,V> provideMultiValueDirectory(Class typeK, Class typeV, String workingDir, String dbName,
@@ -59,7 +64,9 @@ public class BerkeleyDBProvider extends DirectoryProvider {
 		init();
 
 		Environment env = this.getEnvironment(new File(workingDir));
-		return new MultiValueJEDirectory<K,V>(typeK, typeV, env, dbName);
+		KeySimilarityComparator<K> similarityComparator =
+				KeySimilarityComparatorFactory.getComparator(typeK, config.getSimilarityMetric());
+		return new MultiValueJEDirectory<K,V>(typeK, typeV, env, dbName, similarityComparator);
 	}
 
 	private void init() {

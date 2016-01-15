@@ -17,16 +17,13 @@
 
 package ow.directory.inmemory;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import ow.directory.DirectoryConfiguration;
 import ow.directory.MultiValueDirectory;
 import ow.directory.SingleValueDirectory;
+import ow.directory.comparator.KeySimilarityComparator;
 
 public final class MultipleValueHashDirectory<K,V> implements MultiValueDirectory<K,V> {
 	SingleValueDirectory<K,Map<V,V>> internalDir;
@@ -52,6 +49,38 @@ public final class MultipleValueHashDirectory<K,V> implements MultiValueDirector
 
 		return ret;
 	}
+
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.internalDir.getSimilarityComparator();
+	}
+
+	@Override
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return this.internalDir.getSimilarKeys(key, threshold);
+	}
+
+	public Map<K,Set<V>> getSimilar(K key, float threshold) throws Exception {
+		Set<K> keys = getSimilarKeys(key, threshold);
+
+		HashMap<K,Set<V>> results = new HashMap<>();
+
+		for (K k : keys) {
+			results.put(k, this.get(k));
+		}
+
+		return results;
+	}
+
+//	public Set<Map.Entry<K,Set<V>>> getSimilar(K key, float threshold) throws Exception {
+//		Set<K> keys = getSimilarKeys(key, threshold);
+//
+//		Set<Map.Entry<K, Set<V>>> ret = new HashSet<>();
+//		for (K k : keys) {
+//			ret.add(new AbstractMap.SimpleImmutableEntry<>(k, get(k)));
+//		}
+//		return ret;
+//	}
 
 	public V put(K key, V value) throws Exception {
 		V ret = null;

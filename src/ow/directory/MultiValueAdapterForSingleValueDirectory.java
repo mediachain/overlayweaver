@@ -16,10 +16,10 @@
 
 package ow.directory;
 
-import java.util.HashSet;
-import java.util.Iterator;
+import ow.directory.comparator.KeySimilarityComparator;
+
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * An adapter which converts a {@link SingleValueDirectory SingleValueDirectory}
@@ -41,6 +41,27 @@ public final class MultiValueAdapterForSingleValueDirectory<K,V> implements Mult
 			ret.add(value);
 		}
 
+		return ret;
+	}
+
+	@Override
+	public KeySimilarityComparator<K> getSimilarityComparator() {
+		return this.dir.getSimilarityComparator();
+	}
+
+	@Override
+	public Set<K> getSimilarKeys(K key, float threshold) throws Exception {
+		return this.dir.getSimilarKeys(key, threshold);
+	}
+
+	public Map<K, Set<V>> getSimilar(K key, float threshold) throws Exception {
+		final Map<K, V> vals = this.dir.getSimilar(key, threshold);
+		TreeMap<K, Set<V>> ret = new TreeMap<>();
+		for (K k : vals.keySet()) {
+			Set<V> valSet = new HashSet<>();
+			valSet.add(vals.get(k));
+			ret.put(k, valSet);
+		}
 		return ret;
 	}
 

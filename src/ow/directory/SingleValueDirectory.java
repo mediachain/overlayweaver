@@ -17,14 +17,22 @@
 
 package ow.directory;
 
+import ow.directory.comparator.KeySimilarityComparator;
+
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 
 /**
  *	A directory that maps keys to values.
  */
 public interface SingleValueDirectory<K,V> extends Iterable<Map.Entry<K,V>> {
 	V get(K key) throws Exception;
+
+	KeySimilarityComparator<K> getSimilarityComparator();
+	Set<K> getSimilarKeys(K key, float threshold) throws Exception;
+	Map<K,V> getSimilar(K key, float threshold) throws Exception;
 	V put(K key, V value) throws Exception;
 	V remove(K key) throws Exception;
 	boolean isEmpty();
